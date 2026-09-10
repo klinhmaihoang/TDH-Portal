@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin — Portal Học viên TDH Academy</title>
 <link rel="icon" href="logo-tdh.png">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--honey:#F0A319;--honey-dark:#C97F0A;--honey-light:#FBEBD3;--espresso:#2A1D02;--ink:#3B2A18;--muted:#8A7860;--cream:#FBF6EC;--card:#fff;--line:#EFE4CF;--sage:#6B8F71;--danger:#B3453D}
+  :root{--honey:#A87A2E;--honey-dark:#7A5A20;--honey-light:#F1E6D2;--espresso:#262019;--ink:#262019;--muted:#6B5F52;--cream:#F7F4EE;--card:#fff;--line:#E4DDD0;--sage:#5F7A63;--danger:#B3453D}
   *{box-sizing:border-box}
   body{margin:0;background:var(--cream);color:var(--ink);font-family:'Be Vietnam Pro',sans-serif}
-  h1,h2,h3{font-family:'Baloo 2',sans-serif;color:var(--espresso)}
+  h1,h2,h3{font-family:'Lora',serif;font-weight:600;color:var(--espresso)}
   button{font-family:inherit;cursor:pointer}
-  input,textarea,select{font-family:inherit;font-size:14px;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:#FFFDF8}
+  input,textarea,select{font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff}
   input:focus,textarea:focus,select:focus{outline:none;border-color:var(--honey)}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;padding:8px 6px;border-bottom:2px solid var(--line)}
+  th{text-align:left;color:var(--muted);font-size:11.5px;font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}
   td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
-  .btn{border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700}
+  .btn{border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600}
   .btn-honey{background:var(--honey);color:var(--espresso)}
   .btn-ghost{background:none;border:1.5px solid var(--line);color:var(--ink)}
   .btn-danger{background:#FBEAEA;color:var(--danger)}
@@ -326,7 +326,7 @@ function editDish(d){
   });
 
   $('#m-save-dish').addEventListener('click', async ()=>{
-    const r = await api('admin_update_dish_meta', {dishId:d.id, data:{
+    const r = await api('admin_update_dish_meta', {dishId:d.id, dishName:d.name, data:{
       image_url:$('#m-img').value.trim(), description:$('#m-desc').value.trim(),
       instructions:$('#m-instr').value.trim(),
       category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(),
@@ -404,7 +404,7 @@ function editSemi(s){
   });
 
   $('#m-save-semi').addEventListener('click', async ()=>{
-    const r = await api('admin_update_semi_meta', {semiId:s.id, data:{
+    const r = await api('admin_update_semi_meta', {semiId:s.id, semiName:s.name, data:{
       image_url:$('#m-simg').value.trim(), description:$('#m-sdesc').value.trim(),
       instructions:$('#m-sinstr').value.trim(),
       category:$('#m-scat').value.trim(), display_order:$('#m-sorder').value.trim(),
