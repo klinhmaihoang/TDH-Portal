@@ -164,6 +164,11 @@
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzQPhG81JJhpWXJ_fHHmnQXZhzbPIZnZ0eKgts1LoUak9wTE6fszD0liZGMNszMOrBg/exec'; // giống hệt URL đã dán trong portal-hocvien.html
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+// Dùng khi nhúng dữ liệu vào thuộc tính onclick='...' bọc bởi DẤU NHÁY ĐƠN —
+// nếu tên món/file/thông báo có chứa dấu nháy đơn thật (VD "Trà L'Amour"),
+// JSON.stringify không tự escape ký tự này, sẽ làm ĐỨT GÃY thuộc tính HTML
+// giữa chừng và làm hỏng nút bấm. Escape thành mã HTML &#39; để an toàn.
+function jsonAttr(obj){ return JSON.stringify(obj).replace(/'/g, '&#39;'); }
 let ADMIN_KEY = localStorage.getItem('tdh_portal_admin_key') || '';
 
 async function api(action, data){
@@ -284,7 +289,7 @@ function renderDishTable(list){
       <td>${d.name}</td><td>${money(d.cost)}</td><td>${money(d.suggestedPrice)}</td>
       <td>${d.category||'—'}</td>
       <td><span class="badge ${d.published?'badge-on':'badge-off'}">${d.published?'Đã công bố':'Chưa công bố'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick='editDish(${JSON.stringify(d)})'>Sửa</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick='editDish(${jsonAttr(d)})'>Sửa</button></td>
     </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy món nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
 }
 $('#search-dishes').addEventListener('input', e=>{
@@ -367,7 +372,7 @@ function renderSemiTable(list){
       <td>${s.name}</td><td>${s.yieldQty||''} ${s.yieldUnit||''}</td><td>${money(s.unitCost)}</td>
       <td>${s.category||'—'}</td>
       <td><span class="badge ${s.published?'badge-on':'badge-off'}">${s.published?'Đã công bố':'Chưa công bố'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick='editSemi(${JSON.stringify(s)})'>Sửa</button></td>
+      <td><button class="btn btn-ghost btn-sm" onclick='editSemi(${jsonAttr(s)})'>Sửa</button></td>
     </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy công thức nền nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
 }
 $('#search-semis').addEventListener('input', e=>{
@@ -434,7 +439,7 @@ async function loadFiles(){
   if(!r.ok) return;
   $('#tb-files').innerHTML = (r.items||[]).map(f=>`
     <tr><td>${f.title}</td><td>${f.category||''}</td><td>${f.note||''}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick='editFile(${JSON.stringify(f)})'>Sửa</button>
+    <td><button class="btn btn-ghost btn-sm" onclick='editFile(${jsonAttr(f)})'>Sửa</button>
     <button class="btn btn-danger btn-sm" onclick="delRow('files','${f.id}',loadFiles)">Xoá</button></td></tr>`).join('')
     || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có tài liệu nào.</td></tr>';
 }
@@ -466,7 +471,7 @@ async function loadAnn(){
   $('#tb-ann').innerHTML = (r.items||[]).map(a=>`
     <tr><td>${a.title}</td><td>${String(a.pinned).toUpperCase()==='TRUE'?'📌':''}</td>
     <td>${a.created_at ? new Date(a.created_at).toLocaleDateString('vi-VN') : ''}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick='editAnn(${JSON.stringify(a)})'>Sửa</button>
+    <td><button class="btn btn-ghost btn-sm" onclick='editAnn(${jsonAttr(a)})'>Sửa</button>
     <button class="btn btn-danger btn-sm" onclick="delRow('announcements','${a.id}',loadAnn)">Xoá</button></td></tr>`).join('')
     || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có thông báo nào.</td></tr>';
 }
