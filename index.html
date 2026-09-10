@@ -254,6 +254,7 @@
       <div class="dish-cat" id="modal-cat"></div>
       <h3 id="modal-name"></h3>
       <p class="modal-desc" id="modal-desc"></p>
+      <a id="modal-pdf-link" href="#" target="_blank" style="display:none;align-items:center;gap:8px;background:var(--honey-light);color:var(--honey-dark);font-weight:700;font-size:13.5px;padding:11px 14px;border-radius:12px;margin-bottom:16px;text-decoration:none">📄 Xem file PDF công thức</a>
       <div class="price-box">
         <div>
           <div class="l1">Giá vốn</div>
@@ -381,7 +382,7 @@ function renderDishes(){
   $('#dish-empty').style.display = list.length ? 'none':'block';
   $('#dish-grid').innerHTML = list.map(d=>`
     <div class="dish-card" data-id="${d.id}">
-      <div class="dish-thumb" style="${d.imageUrl?`background-image:url('${d.imageUrl}')`:''}">${d.imageUrl?'':'🍹'}</div>
+      <div class="dish-thumb" style="${(d.imageUrl && d.fileType!=='pdf')?`background-image:url('${d.imageUrl}')`:''}">${d.fileType==='pdf'?'📄':(d.imageUrl?'':'🍹')}</div>
       <div class="dish-body">
         <div class="dish-cat">${d.category||'Khác'}</div>
         <div class="dish-name">${d.name}</div>
@@ -394,7 +395,15 @@ async function openDish(id){
   const r = await api('get_dish_detail', {token: TOKEN, dishId:id});
   if(!r.ok){ alert(r.error||'Không tải được công thức'); return; }
   const d = r.dish;
-  $('#modal-thumb').style.backgroundImage = d.imageUrl?`url('${d.imageUrl}')`:'none';
+  const isPdf = d.fileType === 'pdf';
+  $('#modal-thumb').style.backgroundImage = (d.imageUrl && !isPdf) ? `url('${d.imageUrl}')` : 'none';
+  $('#modal-thumb').textContent = isPdf ? '📄' : '';
+  $('#modal-thumb').style.display = isPdf ? 'flex' : 'block';
+  $('#modal-thumb').style.alignItems = 'center';
+  $('#modal-thumb').style.justifyContent = 'center';
+  $('#modal-thumb').style.fontSize = '40px';
+  const pdfLink = $('#modal-pdf-link');
+  if(isPdf && d.imageUrl){ pdfLink.href = d.imageUrl; pdfLink.style.display = 'flex'; } else { pdfLink.style.display = 'none'; }
   $('#modal-cat').textContent = d.category||'Khác';
   $('#modal-name').textContent = d.name;
   $('#modal-desc').textContent = d.description||'';
