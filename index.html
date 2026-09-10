@@ -345,6 +345,30 @@ async function boot(){
   renderAnnouncements(home.announcements||[]);
   loadDishes();
   loadFiles();
+  setupAutoRefresh();
+}
+/* ====================== TỰ ĐỘNG CẬP NHẬT (không cần bấm reload) ======================
+ * Học viên thường không biết admin vừa đăng công thức/thông báo mới để chủ động
+ * bấm tải lại trang. Cứ 60 giây (và ngay khi quay lại tab sau khi đã rời quá
+ * 20 giây), Portal tự âm thầm hỏi lại máy chủ và cập nhật giao diện — không làm
+ * gián đoạn nếu học viên đang xem, không tải lại toàn trang. Tạm dừng khi tab bị
+ * ẩn (chuyển sang tab khác) để đỡ tốn tài nguyên khi không ai xem. */
+let lastAutoRefresh = Date.now();
+async function silentRefresh(){
+  if(!TOKEN) return;
+  try{
+    const home = await api('get_home', {token: TOKEN});
+    if(home.ok){ SETTINGS = home.settings || {}; applySettingsToUI(); renderAnnouncements(home.announcements||[]); }
+    await loadDishes();
+    await loadFiles();
+  }catch(err){ /* lỗi mạng tạm thời — bỏ qua, thử lại ở lần kế tiếp */ }
+  lastAutoRefresh = Date.now();
+}
+function setupAutoRefresh(){
+  setInterval(()=>{ if(!document.hidden) silentRefresh(); }, 60000);
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden && (Date.now()-lastAutoRefresh > 20000)) silentRefresh();
+  });
 }
 function logout(){
   localStorage.removeItem('tdh_portal_token');
@@ -406,7 +430,7 @@ function renderCategories(){
   $('#cat-row').innerHTML = cats.map(c=>`<button class="cat-chip ${c===ACTIVE_CAT?'active':''}" data-cat="${c}">${c}</button>`).join('');
   $$('.cat-chip').forEach(b=>b.addEventListener('click', ()=>{ ACTIVE_CAT=b.dataset.cat; renderCategories(); renderDishes(); }));
 }
-function money(n){ n=Number(n)||0; return n.toLocaleString('vi-VN')+'đ'; }
+function money(n){ n=Math.round(Number(n)||0); return n.toLocaleString('vi-VN')+'đ'; }
 function renderDishes(){
   const all = currentList();
   const list = ACTIVE_CAT==='Tất cả' ? all : all.filter(d=>(d.category||'Khác')===ACTIVE_CAT);
