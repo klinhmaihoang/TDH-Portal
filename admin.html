@@ -75,7 +75,8 @@
       <div class="brand"><img src="logo-tdh.png"><b>Admin Portal</b></div>
       <nav>
         <button data-panel="students" class="active">👩‍🎓 Học viên</button>
-        <button data-panel="dishes">🍹 Công thức</button>
+        <button data-panel="dishes">🍹 Món hoàn thiện</button>
+        <button data-panel="semis">🧪 Công thức nền</button>
         <button data-panel="files">📂 Thư viện file</button>
         <button data-panel="announcements">📣 Thông báo</button>
         <button data-panel="settings">⚙️ Cài đặt</button>
@@ -94,11 +95,23 @@
 
       <!-- CÔNG THỨC -->
       <section class="panel" id="panel-dishes">
-        <div class="panel-head"><h2>Công bố công thức</h2></div>
+        <div class="panel-head"><h2>Công bố món hoàn thiện</h2></div>
         <p style="color:var(--muted);font-size:13px;margin-top:-8px">Danh sách món lấy trực tiếp từ Sheet công thức gốc (CostApp). Bấm vào món để thêm ảnh/mô tả và công bố cho học viên.</p>
+        <input type="text" id="search-dishes" placeholder="🔎 Tìm món theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
           <table><thead><tr><th>Món</th><th>Giá vốn</th><th>Giá bán</th><th>Danh mục</th><th>Trạng thái</th><th></th></tr></thead>
           <tbody id="tb-dishes"></tbody></table>
+        </div>
+      </section>
+
+      <!-- CÔNG THỨC NỀN -->
+      <section class="panel" id="panel-semis">
+        <div class="panel-head"><h2>Công bố công thức nền</h2></div>
+        <p style="color:var(--muted);font-size:13px;margin-top:-8px">Bán thành phẩm (cốt trà, siro, nước đường...) lấy từ Sheet công thức gốc — công bố để học viên xem cả công thức nền, không chỉ món hoàn thiện.</p>
+        <input type="text" id="search-semis" placeholder="🔎 Tìm công thức nền theo tên..." style="width:100%;margin-bottom:12px">
+        <div class="card">
+          <table><thead><tr><th>Tên</th><th>Sản lượng</th><th>Giá thành/đơn vị</th><th>Danh mục</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody id="tb-semis"></tbody></table>
         </div>
       </section>
 
@@ -188,7 +201,7 @@ $('#in-adminkey').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preven
 function bootAdmin(){
   $('#login-screen').style.display='none';
   $('#app').style.display='block';
-  loadStudents(); loadDishes(); loadFiles(); loadAnn(); loadSettings();
+  loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadAnn(); loadSettings();
 }
 if(ADMIN_KEY){ api('admin_login',{}).then(r=>{ if(r.ok) bootAdmin(); else $('#login-screen').style.display='flex'; }); }
 
@@ -248,18 +261,30 @@ async function delRow(tab, id, reload){
   if(r.ok) reload(); else alert(r.error);
 }
 
-/* ================= CÔNG THỨC ================= */
+/* ================= CÔNG THỨC (Món hoàn thiện) ================= */
+let ALL_DISHES = [];
+function stripDiacritics(str){
+  return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
+}
 async function loadDishes(){
   const r = await api('admin_list_dishes', {});
   if(!r.ok) return;
-  $('#tb-dishes').innerHTML = (r.dishes||[]).map(d=>`
+  ALL_DISHES = r.dishes || [];
+  renderDishTable(ALL_DISHES);
+}
+function renderDishTable(list){
+  $('#tb-dishes').innerHTML = list.map(d=>`
     <tr>
       <td>${d.name}</td><td>${money(d.cost)}</td><td>${money(d.suggestedPrice)}</td>
       <td>${d.category||'—'}</td>
       <td><span class="badge ${d.published?'badge-on':'badge-off'}">${d.published?'Đã công bố':'Chưa công bố'}</span></td>
       <td><button class="btn btn-ghost btn-sm" onclick='editDish(${JSON.stringify(d)})'>Sửa</button></td>
-    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Chưa đọc được món nào — kiểm tra Sheet ID công thức gốc ở Cài đặt.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy món nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
 }
+$('#search-dishes').addEventListener('input', e=>{
+  const q = stripDiacritics(e.target.value.trim());
+  renderDishTable(q ? ALL_DISHES.filter(d=>stripDiacritics(d.name).includes(q)) : ALL_DISHES);
+});
 let currentDishFileType = 'image';
 function editDish(d){
   currentDishFileType = d.fileType || 'image';
@@ -312,6 +337,74 @@ function fileToBase64(file){
     reader.onload = ()=> resolve(reader.result.split(',')[1]); // bỏ phần "data:...;base64," ở đầu
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+/* ================= CÔNG THỨC NỀN (bán thành phẩm) ================= */
+let ALL_SEMIS = [];
+async function loadSemis(){
+  const r = await api('admin_list_semis', {});
+  if(!r.ok) return;
+  ALL_SEMIS = r.semis || [];
+  renderSemiTable(ALL_SEMIS);
+}
+function renderSemiTable(list){
+  $('#tb-semis').innerHTML = list.map(s=>`
+    <tr>
+      <td>${s.name}</td><td>${s.yieldQty||''} ${s.yieldUnit||''}</td><td>${money(s.unitCost)}</td>
+      <td>${s.category||'—'}</td>
+      <td><span class="badge ${s.published?'badge-on':'badge-off'}">${s.published?'Đã công bố':'Chưa công bố'}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick='editSemi(${JSON.stringify(s)})'>Sửa</button></td>
+    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy công thức nền nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
+}
+$('#search-semis').addEventListener('input', e=>{
+  const q = stripDiacritics(e.target.value.trim());
+  renderSemiTable(q ? ALL_SEMIS.filter(s=>stripDiacritics(s.name).includes(q)) : ALL_SEMIS);
+});
+let currentSemiFileType = 'image';
+function editSemi(s){
+  currentSemiFileType = s.fileType || 'image';
+  openModal(`<h3>${s.name}</h3>
+    <div class="field">
+      <label>Ảnh minh hoạ hoặc file PDF công thức</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="m-upload-semi" accept="image/*,.pdf" style="flex:1;min-width:180px">
+        <span id="m-upload-semi-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0">Tải trực tiếp ảnh (JPG/PNG...) hoặc PDF, tối đa ~8MB.</p>
+    </div>
+    <div class="field"><label>— hoặc dán link ảnh/PDF có sẵn (Drive/Internet)</label><input id="m-simg" value="${s.imageUrl||''}"></div>
+    <div class="field"><label>Mô tả ngắn</label><textarea id="m-sdesc" rows="3">${s.description||''}</textarea></div>
+    <div class="field"><label>Danh mục (VD: Cốt trà, Siro, Nước sốt...)</label><input id="m-scat" value="${s.category||''}"></div>
+    <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-sorder" value="${s.order||''}"></div>
+    <div class="field"><label><input type="checkbox" id="m-spub" ${s.published?'checked':''} style="width:auto;margin-right:6px">Công bố cho học viên xem</label></div>
+    <button class="btn btn-honey" id="m-save-semi">Lưu</button>`);
+
+  $('#m-upload-semi').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const status = $('#m-upload-semi-status');
+    status.textContent = 'Đang tải lên...';
+    try{
+      const base64 = await fileToBase64(file);
+      const r = await api('admin_upload_dish_media', { fileName:file.name, mimeType:file.type, base64 });
+      if(!r.ok){ status.textContent = ''; alert('Tải lên thất bại: ' + r.error); return; }
+      $('#m-simg').value = r.url;
+      currentSemiFileType = r.fileType;
+      status.textContent = '✅ Đã tải lên (' + (r.fileType==='pdf'?'PDF':'ảnh') + ') — nhớ bấm Lưu';
+    }catch(err){
+      status.textContent = '';
+      alert('Tải lên thất bại — thử lại hoặc dùng file nhỏ hơn.');
+    }
+  });
+
+  $('#m-save-semi').addEventListener('click', async ()=>{
+    const r = await api('admin_update_semi_meta', {semiId:s.id, data:{
+      image_url:$('#m-simg').value.trim(), description:$('#m-sdesc').value.trim(),
+      category:$('#m-scat').value.trim(), display_order:$('#m-sorder').value.trim(),
+      file_type: currentSemiFileType,
+      published: $('#m-spub').checked }});
+    if(r.ok){ closeModal(); loadSemis(); toast('Đã lưu'); } else alert(r.error);
   });
 }
 
