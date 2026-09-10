@@ -86,6 +86,10 @@
   .price-box{background:var(--honey-light);border-radius:14px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px}
   .price-box .l1{font-size:11.5px;color:var(--espresso);opacity:.75}
   .price-box .l2{font-family:'Baloo 2',sans-serif;font-size:19px;font-weight:700;color:var(--espresso)}
+  .price-note{font-size:11px;color:var(--muted);margin:-8px 0 14px;line-height:1.4;font-style:italic}
+  .instructions-box{background:#F4F0E6;border-radius:14px;padding:14px 16px;margin-top:16px}
+  .instructions-title{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:14px;color:var(--espresso);margin-bottom:8px}
+  .instructions-text{font-size:13.5px;color:var(--ink);line-height:1.7}
   table.comp-table{width:100%;border-collapse:collapse;font-size:13px}
   table.comp-table th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;padding:6px 4px;border-bottom:1.5px solid var(--line)}
   table.comp-table td{padding:8px 4px;border-bottom:1px solid var(--line)}
@@ -370,10 +374,18 @@ function applySettingsToUI(){
 
 /* ====================== CÔNG THỨC (Món hoàn thiện + Công thức nền) ====================== */
 async function loadDishes(){
-  const r = await api('get_dishes', {token: TOKEN});
+  $('#dish-grid').innerHTML = '';
+  $('#dish-empty').style.display = 'block';
+  $('#dish-empty').innerHTML = '<div class="ic">⏳</div>Đang tải công thức...';
+  // Tải song song 2 danh sách (Món hoàn thiện + Công thức nền) thay vì tuần tự
+  // — nhanh gần gấp đôi, đỡ cảm giác trang "đứng im" khi vừa bấm vào tab.
+  const [r, r2] = await Promise.all([
+    api('get_dishes', {token: TOKEN}),
+    api('get_semis', {token: TOKEN}),
+  ]);
   if(r.ok) DISHES = r.dishes || [];
-  const r2 = await api('get_semis', {token: TOKEN});
   if(r2.ok) SEMIS = r2.semis || [];
+  $('#dish-empty').innerHTML = '<div class="ic">🍹</div>Chưa có công thức nào được công bố.';
   renderCategories();
   renderDishes();
 }
@@ -404,11 +416,16 @@ function renderDishes(){
       ? `<div class="dish-thumb">📄</div>`
       : `<div class="dish-thumb" style="${d.imageUrl?`background-image:url('${d.imageUrl}')`:''}">${d.imageUrl?'':(RECIPE_MODE==='dish'?'🍹':'🧪')}</div>`;
     const pdfLink = (isPdf && d.imageUrl) ? `<a class="pdf-link" href="${d.imageUrl}" target="_blank">📄 Xem file PDF công thức</a>` : '';
+    // Ghi chú nhỏ dưới giá bán: chỉ Món hoàn thiện mới có, phản ánh đúng % vận
+    // hành/food cost mục tiêu ĐÃ ĐẶT cho món này trong CostApp (không tự suy
+    // diễn công thức tính — chỉ nêu lại đúng thông số gốc để học viên tham khảo).
+    const priceNote = (RECIPE_MODE==='dish' && (d.opPct || d.fcPct))
+      ? `<p class="price-note">Giá bán đề xuất tính theo % chi phí vận hành ${d.opPct||0}% + % food cost mục tiêu ${d.fcPct||0}% đã đặt trong CostApp.</p>` : '';
     const priceBox = RECIPE_MODE==='dish'
       ? `<div class="price-box">
            <div><div class="l1">Giá vốn</div><div class="l2">${money(d.cost)}</div></div>
            <div style="text-align:right"><div class="l1">Giá bán đề xuất</div><div class="l2">${money(d.suggestedPrice)}</div></div>
-         </div>`
+         </div>${priceNote}`
       : `<div class="price-box">
            <div><div class="l1">Sản lượng</div><div class="l2">${d.yieldQty||0} ${d.yieldUnit||''}</div></div>
            <div style="text-align:right"><div class="l1">Giá thành / ${d.yieldUnit||'đơn vị'}</div><div class="l2">${money(d.unitCost)}</div></div>
@@ -419,6 +436,11 @@ function renderDishes(){
         <td>${c.qty} ${c.unit||''}</td>
         <td class="num">${money(c.thanhTien)}</td>
       </tr>`).join('');
+    const instructionsBlock = d.instructions ? `
+        <div class="instructions-box">
+          <div class="instructions-title">👩‍🍳 Cách làm</div>
+          <div class="instructions-text">${escapeHtml(d.instructions).replace(/\n/g,'<br>')}</div>
+        </div>` : '';
     return `<div class="dish-card">
       ${thumb}
       <div class="dish-body">
@@ -431,9 +453,13 @@ function renderDishes(){
           <thead><tr><th>Thành phần</th><th>Định lượng</th><th class="num">Thành tiền</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
+        ${instructionsBlock}
       </div>
     </div>`;
   }).join('');
+}
+function escapeHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 /* ====================== THƯ VIỆN ====================== */
