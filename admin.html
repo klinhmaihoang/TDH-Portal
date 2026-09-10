@@ -147,6 +147,8 @@
             <div class="field"><label>Link group cộng đồng</label><input id="s-group_url"></div>
           </div>
           <button class="btn btn-honey" id="btn-save-settings">Lưu cài đặt</button>
+          <button class="btn btn-ghost" id="btn-clear-cache" style="margin-left:8px">🔄 Làm mới dữ liệu công thức ngay</button>
+          <p style="font-size:11.5px;color:var(--muted);margin:8px 0 0">Công thức/giá tự cập nhật trong tối đa 3 phút. Vừa sửa gì bên CostApp mà muốn thấy ngay trên Portal thì bấm nút này.</p>
         </div>
       </section>
 
@@ -485,6 +487,13 @@ $('#btn-save-settings').addEventListener('click', async ()=>{
   const r = await api('admin_update_settings', {data});
   btn.disabled = false; btn.textContent = oldText;
   if(r.ok){ toast('Đã lưu cài đặt'); loadSettings(); } else alert('Lưu thất bại: ' + r.error);
+});
+$('#btn-clear-cache').addEventListener('click', async ()=>{
+  const btn = $('#btn-clear-cache');
+  btn.disabled = true;
+  const r = await api('admin_clear_cache', {});
+  btn.disabled = false;
+  if(r.ok) toast('Đã làm mới — học viên tải lại trang sẽ thấy ngay dữ liệu mới nhất'); else alert('Lỗi: ' + r.error);
 });
 </script>
 </body>
