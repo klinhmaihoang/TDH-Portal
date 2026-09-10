@@ -301,32 +301,47 @@ function showLoginErr(msg){
 
 /* ====================== KHỞI ĐỘNG APP SAU ĐĂNG NHẬP ====================== */
 async function boot(){
-  const home = await api('get_home', {token: TOKEN});
-  if(!home.ok){ logout(); return; }
-  SETTINGS = home.settings || {};
+  // Gọi gộp 1 lần duy nhất (thay vì 4 lệnh riêng) để tải trang lần đầu nhanh
+  // hơn — xem chú thích đầy đủ ở silentRefresh() bên dưới.
+  const data = await api('get_portal_data', {token: TOKEN});
+  if(!data.ok){ logout(); return; }
+  applyPortalData(data);
   $('#login-screen').style.display='none';
   $('#app-screen').style.display='block';
   $('#hi-name').textContent = 'Chào, ' + (localStorage.getItem('tdh_portal_name')||'bạn');
-  applySettingsToUI();
-  renderAnnouncements(home.announcements||[]);
-  loadDishes();
-  loadFiles();
   setupAutoRefresh();
+}
+// Áp toàn bộ dữ liệu 1 lượt gọi get_portal_data vào giao diện — dùng chung
+// cho cả lần tải trang đầu tiên lẫn mỗi lần tự làm mới nền. Không xoá trắng
+// khung nào trước khi vẽ lại — các hàm render đều thay thế nội dung trong 1
+// bước (không có bước "Đang tải..." xen giữa), nên tự làm mới nền không gây
+// giật/nhấp nháy trắng khung khi học viên đang đọc.
+function applyPortalData(data){
+  SETTINGS = data.settings || {};
+  applySettingsToUI();
+  renderAnnouncements(data.announcements||[]);
+  DISHES = data.dishes || [];
+  SEMIS = data.semis || [];
+  renderCategories();
+  renderDishes();
+  renderFiles(data.files||[]);
 }
 /* ====================== TỰ ĐỘNG CẬP NHẬT (không cần bấm reload) ======================
  * Học viên thường không biết admin vừa đăng công thức/thông báo mới để chủ động
  * bấm tải lại trang. Cứ 60 giây (và ngay khi quay lại tab sau khi đã rời quá
  * 20 giây), Portal tự âm thầm hỏi lại máy chủ và cập nhật giao diện — không làm
  * gián đoạn nếu học viên đang xem, không tải lại toàn trang. Tạm dừng khi tab bị
- * ẩn (chuyển sang tab khác) để đỡ tốn tài nguyên khi không ai xem. */
+ * ẩn (chuyển sang tab khác) để đỡ tốn tài nguyên khi không ai xem.
+ * Dùng ĐÚNG 1 lệnh gọi gộp (get_portal_data) thay vì 4 lệnh riêng (get_home +
+ * get_dishes + get_semis + get_files) — mỗi lệnh gọi tới Apps Script tốn thêm
+ * độ trễ mạng ngoài thời gian xử lý thật, gộp lại giúp mỗi lượt làm mới nhanh
+ * hơn hẳn, đặc biệt lúc mạng chậm. */
 let lastAutoRefresh = Date.now();
 async function silentRefresh(){
   if(!TOKEN) return;
   try{
-    const home = await api('get_home', {token: TOKEN});
-    if(home.ok){ SETTINGS = home.settings || {}; applySettingsToUI(); renderAnnouncements(home.announcements||[]); }
-    await loadDishes();
-    await loadFiles();
+    const data = await api('get_portal_data', {token: TOKEN});
+    if(data.ok) applyPortalData(data);
   }catch(err){ /* lỗi mạng tạm thời — bỏ qua, thử lại ở lần kế tiếp */ }
   lastAutoRefresh = Date.now();
 }
@@ -372,22 +387,10 @@ function applySettingsToUI(){
 }
 
 /* ====================== CÔNG THỨC (Món hoàn thiện + Công thức nền) ====================== */
-async function loadDishes(){
-  $('#dish-grid').innerHTML = '';
-  $('#dish-empty').style.display = 'block';
-  $('#dish-empty').innerHTML = '<div class="ic">⏳</div>Đang tải công thức...';
-  // Tải song song 2 danh sách (Món hoàn thiện + Công thức nền) thay vì tuần tự
-  // — nhanh gần gấp đôi, đỡ cảm giác trang "đứng im" khi vừa bấm vào tab.
-  const [r, r2] = await Promise.all([
-    api('get_dishes', {token: TOKEN}),
-    api('get_semis', {token: TOKEN}),
-  ]);
-  if(r.ok) DISHES = r.dishes || [];
-  if(r2.ok) SEMIS = r2.semis || [];
-  $('#dish-empty').innerHTML = '<div class="ic">🍹</div>Chưa có công thức nào được công bố.';
-  renderCategories();
-  renderDishes();
-}
+// Lưu ý: KHÔNG còn hàm loadDishes() tự gọi API riêng nữa — dữ liệu Món/Công
+// thức nền giờ luôn đến từ 1 lượt gọi gộp get_portal_data (xem boot()/
+// silentRefresh() ở trên), applyPortalData() gán thẳng vào DISHES/SEMIS rồi
+// gọi renderCategories()+renderDishes() luôn, khỏi cần hàm tải riêng nữa.
 $$('.mode-tab').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     RECIPE_MODE = btn.dataset.mode;
@@ -435,8 +438,8 @@ function renderDishes(){
          </div>`;
     const rows = (d.components||[]).map(c=>`
       <tr>
-        <td>${c.name} ${c.typeLabel?`<span class="type-tag">${c.typeLabel}</span>`:''}</td>
-        <td>${c.qty} ${c.unit||''}</td>
+        <td>${escapeHtml(c.name)} ${c.typeLabel?`<span class="type-tag">${escapeHtml(c.typeLabel)}</span>`:''}</td>
+        <td>${c.qty} ${escapeHtml(c.unit||'')}</td>
         <td class="num">${money(c.thanhTien)}</td>
       </tr>`).join('');
     const instructionsBlock = d.instructions ? `
@@ -447,9 +450,9 @@ function renderDishes(){
     return `<div class="dish-card">
       ${thumb}
       <div class="dish-body">
-        <div class="dish-cat">${d.category||'Khác'}</div>
-        <div class="dish-name">${d.name}</div>
-        ${d.description?`<p class="dish-desc">${d.description}</p>`:''}
+        <div class="dish-cat">${escapeHtml(d.category||'Khác')}</div>
+        <div class="dish-name">${escapeHtml(d.name)}</div>
+        ${d.description?`<p class="dish-desc">${escapeHtml(d.description)}</p>`:''}
         ${pdfLink}
         ${priceBox}
         <table class="comp-table">
@@ -466,15 +469,12 @@ function escapeHtml(s){
 }
 
 /* ====================== THƯ VIỆN ====================== */
-async function loadFiles(){
-  const r = await api('get_files', {token: TOKEN});
-  if(!r.ok) return;
-  const files = r.files||[];
+function renderFiles(files){
   $('#file-empty').style.display = files.length? 'none':'block';
   $('#file-list').innerHTML = files.map(f=>`
     <div class="file-row">
       <div class="file-ic">📄</div>
-      <div class="file-meta"><div class="t">${f.title}</div><div class="c">${f.category||''}${f.note?' · '+f.note:''}</div></div>
+      <div class="file-meta"><div class="t">${escapeHtml(f.title)}</div><div class="c">${escapeHtml(f.category||'')}${f.note?' · '+escapeHtml(f.note):''}</div></div>
       <a class="file-dl" href="${f.fileUrl}" target="_blank">Tải về</a>
     </div>`).join('');
 }
@@ -487,9 +487,9 @@ function renderAnnouncements(list){
   $('#ann-list').innerHTML = list.map(a=>`
     <div class="ann-card ${a.pinned?'pinned':''}">
       ${a.pinned?'<div class="pin-badge">📌 Ghim</div>':''}
-      <h4>${a.title}</h4>
+      <h4>${escapeHtml(a.title)}</h4>
       <div class="date">${a.createdAt ? new Date(a.createdAt).toLocaleDateString('vi-VN') : ''}</div>
-      <div class="content">${a.content}</div>
+      <div class="content">${escapeHtml(a.content)}</div>
     </div>`).join('');
   // Nếu học viên ĐANG mở sẵn tab Thông báo lúc có tin mới về (do tự động làm
   // mới nền), coi như đã xem luôn — khỏi hiện chấm đỏ dù họ đang nhìn thấy rồi.
