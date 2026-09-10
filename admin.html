@@ -299,6 +299,7 @@ function editDish(d){
     </div>
     <div class="field"><label>— hoặc dán link ảnh/PDF có sẵn (Drive/Internet)</label><input id="m-img" value="${d.imageUrl||''}"></div>
     <div class="field"><label>Mô tả ngắn</label><textarea id="m-desc" rows="3">${d.description||''}</textarea></div>
+    <div class="field"><label>Cách làm / Hướng dẫn pha chế (mỗi dòng 1 bước)</label><textarea id="m-instr" rows="5" placeholder="Bước 1: ...&#10;Bước 2: ...">${d.instructions||''}</textarea></div>
     <div class="field"><label>Danh mục (VD: Cà phê pha phin, Trà trái cây...)</label><input id="m-cat" value="${d.category||''}"></div>
     <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-order" value="${d.order||''}"></div>
     <div class="field"><label><input type="checkbox" id="m-pub" ${d.published?'checked':''} style="width:auto;margin-right:6px">Công bố cho học viên xem</label></div>
@@ -325,6 +326,7 @@ function editDish(d){
   $('#m-save-dish').addEventListener('click', async ()=>{
     const r = await api('admin_update_dish_meta', {dishId:d.id, data:{
       image_url:$('#m-img').value.trim(), description:$('#m-desc').value.trim(),
+      instructions:$('#m-instr').value.trim(),
       category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(),
       file_type: currentDishFileType,
       published: $('#m-pub').checked }});
@@ -375,6 +377,7 @@ function editSemi(s){
     </div>
     <div class="field"><label>— hoặc dán link ảnh/PDF có sẵn (Drive/Internet)</label><input id="m-simg" value="${s.imageUrl||''}"></div>
     <div class="field"><label>Mô tả ngắn</label><textarea id="m-sdesc" rows="3">${s.description||''}</textarea></div>
+    <div class="field"><label>Cách làm / Hướng dẫn pha chế (mỗi dòng 1 bước)</label><textarea id="m-sinstr" rows="5" placeholder="Bước 1: ...&#10;Bước 2: ...">${s.instructions||''}</textarea></div>
     <div class="field"><label>Danh mục (VD: Cốt trà, Siro, Nước sốt...)</label><input id="m-scat" value="${s.category||''}"></div>
     <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-sorder" value="${s.order||''}"></div>
     <div class="field"><label><input type="checkbox" id="m-spub" ${s.published?'checked':''} style="width:auto;margin-right:6px">Công bố cho học viên xem</label></div>
@@ -401,6 +404,7 @@ function editSemi(s){
   $('#m-save-semi').addEventListener('click', async ()=>{
     const r = await api('admin_update_semi_meta', {semiId:s.id, data:{
       image_url:$('#m-simg').value.trim(), description:$('#m-sdesc').value.trim(),
+      instructions:$('#m-sinstr').value.trim(),
       category:$('#m-scat').value.trim(), display_order:$('#m-sorder').value.trim(),
       file_type: currentSemiFileType,
       published: $('#m-spub').checked }});
