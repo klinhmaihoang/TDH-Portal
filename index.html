@@ -344,17 +344,25 @@ function logout(){
 $('#btn-logout').addEventListener('click', logout);
 
 function applySettingsToUI(){
-  const zalo = SETTINGS.zalo_phone || '';
+  // Luôn ép String() cho mọi giá trị đọc từ Cài đặt — nếu Sheet lỡ trả về 1
+  // con số thay vì chuỗi chữ (VD SĐT bị Sheets tự nhận nhầm là số), các dòng
+  // xử lý chuỗi bên dưới (.replace...) sẽ không bị vỡ giữa chừng khiến cả
+  // khối Liên hệ biến mất như trước.
+  const zalo = String(SETTINGS.zalo_phone || '');
+  const facebookUrl = String(SETTINGS.facebook_url || '');
+  const email = String(SETTINGS.email || '');
+  const groupUrl = String(SETTINGS.group_url || '');
+  const costappUrl = String(SETTINGS.costapp_url || '');
   const zaloLink = zalo ? ('https://zalo.me/'+zalo.replace(/\D/g,'')) : '#';
   $('#help-zalo-link').href = zaloLink;
-  $('#group-link').href = SETTINGS.group_url || '#';
-  $('#costapp-link').href = SETTINGS.costapp_url || '#';
+  $('#group-link').href = groupUrl || '#';
+  $('#costapp-link').href = costappUrl || '#';
 
   const items = [
     {ic:'💬', cls:'ic-zalo', label:'Zalo học viện', sub: zalo, href: zaloLink},
-    {ic:'📘', cls:'ic-fb', label:'Facebook học viện', sub:'Nhắn tin trực tiếp', href: SETTINGS.facebook_url||'#'},
-    {ic:'✉️', cls:'ic-mail', label:'Email hỗ trợ', sub: SETTINGS.email||'', href: 'mailto:'+(SETTINGS.email||'')},
-    {ic:'👥', cls:'ic-group', label:'Group cộng đồng', sub:'Cập nhật công thức mới', href: SETTINGS.group_url||'#'},
+    {ic:'📘', cls:'ic-fb', label:'Facebook học viện', sub:'Nhắn tin trực tiếp', href: facebookUrl||'#'},
+    {ic:'✉️', cls:'ic-mail', label:'Email hỗ trợ', sub: email, href: 'mailto:'+email},
+    {ic:'👥', cls:'ic-group', label:'Group cộng đồng', sub:'Cập nhật công thức mới', href: groupUrl||'#'},
   ];
   $('#contact-grid').innerHTML = items.map(it=>`
     <a class="contact-card" href="${it.href}" target="_blank">
