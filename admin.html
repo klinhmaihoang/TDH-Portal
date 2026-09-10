@@ -237,8 +237,12 @@ $('#btn-add-student').addEventListener('click', ()=>{
     <div class="field"><label>Ghi chú (tuỳ chọn — VD: lớp Pha chế 12/2026)</label><input id="m-note"></div>
     <button class="btn btn-honey" id="m-save">Thêm & sinh mã truy cập</button>`);
   $('#m-save').addEventListener('click', async ()=>{
+    const btn = $('#m-save');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
     const r = await api('admin_add_student', {data:{name:$('#m-name').value.trim(), phone:$('#m-phone').value.trim(), note:$('#m-note').value.trim()}});
-    if(!r.ok){ alert(r.error); return; }
+    if(!r.ok){ btn.disabled=false; btn.textContent=oldText; alert('Lỗi: ' + r.error); return; }
     closeModal(); loadStudents();
     openModal(`<h3>✅ Đã thêm học viên</h3><p>Mã truy cập: <span class="code-pill">${r.accessCode}</span></p>
       <p style="font-size:13px;color:var(--muted)">Gửi số điện thoại đã nhập + mã này cho học viên qua Zalo để họ tự đăng nhập vào Portal.</p>
@@ -326,13 +330,18 @@ function editDish(d){
   });
 
   $('#m-save-dish').addEventListener('click', async ()=>{
+    const btn = $('#m-save-dish');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
     const r = await api('admin_update_dish_meta', {dishId:d.id, dishName:d.name, data:{
       image_url:$('#m-img').value.trim(), description:$('#m-desc').value.trim(),
       instructions:$('#m-instr').value.trim(),
       category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(),
       file_type: currentDishFileType,
       published: $('#m-pub').checked }});
-    if(r.ok){ closeModal(); loadDishes(); toast('Đã lưu'); } else alert(r.error);
+    if(r.ok){ closeModal(); loadDishes(); toast('Đã lưu'); }
+    else { btn.disabled = false; btn.textContent = oldText; alert('Lưu thất bại: ' + r.error); }
   });
 }
 function fileToBase64(file){
@@ -404,13 +413,18 @@ function editSemi(s){
   });
 
   $('#m-save-semi').addEventListener('click', async ()=>{
+    const btn = $('#m-save-semi');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
     const r = await api('admin_update_semi_meta', {semiId:s.id, semiName:s.name, data:{
       image_url:$('#m-simg').value.trim(), description:$('#m-sdesc').value.trim(),
       instructions:$('#m-sinstr').value.trim(),
       category:$('#m-scat').value.trim(), display_order:$('#m-sorder').value.trim(),
       file_type: currentSemiFileType,
       published: $('#m-spub').checked }});
-    if(r.ok){ closeModal(); loadSemis(); toast('Đã lưu'); } else alert(r.error);
+    if(r.ok){ closeModal(); loadSemis(); toast('Đã lưu'); }
+    else { btn.disabled = false; btn.textContent = oldText; alert('Lưu thất bại: ' + r.error); }
   });
 }
 
@@ -434,9 +448,14 @@ function editFile(f){
     <div class="field"><label>Ghi chú (tuỳ chọn)</label><input id="m-note" value="${f.note||''}"></div>
     <button class="btn btn-honey" id="m-save">Lưu</button>`);
   $('#m-save').addEventListener('click', async ()=>{
+    const btn = $('#m-save');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
     const data = {title:$('#m-title').value.trim(), category:$('#m-cat').value.trim(), file_url:$('#m-url').value.trim(), note:$('#m-note').value.trim()};
     const r = isNew ? await api('admin_add_file',{data}) : await api('admin_update_file',{id:f.id, data});
-    if(r.ok){ closeModal(); loadFiles(); toast('Đã lưu'); } else alert(r.error);
+    if(r.ok){ closeModal(); loadFiles(); toast('Đã lưu'); }
+    else { btn.disabled=false; btn.textContent=oldText; alert('Lưu thất bại: ' + r.error); }
   });
 }
 
@@ -460,9 +479,14 @@ function editAnn(a){
     <div class="field"><label><input type="checkbox" id="m-pin" ${String(a.pinned).toUpperCase()==='TRUE'?'checked':''} style="width:auto;margin-right:6px">Ghim lên đầu</label></div>
     <button class="btn btn-honey" id="m-save">Lưu</button>`);
   $('#m-save').addEventListener('click', async ()=>{
+    const btn = $('#m-save');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
     const data = {title:$('#m-title').value.trim(), content:$('#m-content').value.trim(), pinned: $('#m-pin').checked};
     const r = isNew ? await api('admin_add_announcement',{data}) : await api('admin_update_announcement',{id:a.id, data});
-    if(r.ok){ closeModal(); loadAnn(); toast('Đã lưu'); } else alert(r.error);
+    if(r.ok){ closeModal(); loadAnn(); toast('Đã lưu'); }
+    else { btn.disabled=false; btn.textContent=oldText; alert('Lưu thất bại: ' + r.error); }
   });
 }
 
