@@ -416,11 +416,15 @@ function renderDishes(){
       ? `<div class="dish-thumb">📄</div>`
       : `<div class="dish-thumb" style="${d.imageUrl?`background-image:url('${d.imageUrl}')`:''}">${d.imageUrl?'':(RECIPE_MODE==='dish'?'🍹':'🧪')}</div>`;
     const pdfLink = (isPdf && d.imageUrl) ? `<a class="pdf-link" href="${d.imageUrl}" target="_blank">📄 Xem file PDF công thức</a>` : '';
-    // Ghi chú nhỏ dưới giá bán: chỉ Món hoàn thiện mới có, phản ánh đúng % vận
-    // hành/food cost mục tiêu ĐÃ ĐẶT cho món này trong CostApp (không tự suy
-    // diễn công thức tính — chỉ nêu lại đúng thông số gốc để học viên tham khảo).
-    const priceNote = (RECIPE_MODE==='dish' && (d.opPct || d.fcPct))
-      ? `<p class="price-note">Giá bán đề xuất tính theo % chi phí vận hành ${d.opPct||0}% + % food cost mục tiêu ${d.fcPct||0}% đã đặt trong CostApp.</p>` : '';
+    // Ghi chú nhỏ dưới giá bán: chỉ Món hoàn thiện mới có. LƯU Ý: chỉ nêu lại 2
+    // MỤC TIÊU cô đặt cho món này trong CostApp (đã nhân 100 để hiện đúng %,
+    // vì Sheet lưu dạng số thập phân 0-1) — KHÔNG viết ra 1 công thức tính cụ
+    // thể vì chưa xem được đúng đoạn code CostApp thực sự dùng để ra số này,
+    // viết bừa 1 phép tính có thể sai và gây hiểu lầm còn tệ hơn không ghi gì.
+    const opPctDisplay = Math.round((Number(d.opPct)||0) * 100);
+    const fcPctDisplay = Math.round((Number(d.fcPct)||0) * 100);
+    const priceNote = (RECIPE_MODE==='dish' && (opPctDisplay || fcPctDisplay))
+      ? `<p class="price-note">Mục tiêu cô đặt cho món này: chi phí vận hành ${opPctDisplay}%, food cost ${fcPctDisplay}% — CostApp tự tính giá bán đề xuất dựa trên 2 mục tiêu này.</p>` : '';
     const priceBox = RECIPE_MODE==='dish'
       ? `<div class="price-box">
            <div><div class="l1">Giá vốn</div><div class="l2">${money(d.cost)}</div></div>
