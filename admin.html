@@ -177,7 +177,7 @@ async function api(action, data){
   }
 }
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2400); }
-function money(n){ n=Number(n)||0; return n.toLocaleString('vi-VN')+'đ'; }
+function money(n){ n=Math.round(Number(n)||0); return n.toLocaleString('vi-VN')+'đ'; }
 function openModal(html){ $('#modal-body').innerHTML=html; $('#modal-bg').classList.add('open'); }
 function closeModal(){ $('#modal-bg').classList.remove('open'); }
 $('#modal-bg').addEventListener('click', e=>{ if(e.target.id==='modal-bg') closeModal(); });
