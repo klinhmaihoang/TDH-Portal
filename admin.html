@@ -152,9 +152,16 @@ const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 let ADMIN_KEY = localStorage.getItem('tdh_portal_admin_key') || '';
 
 async function api(action, data){
-  const res = await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify(Object.assign({action, adminKey: ADMIN_KEY}, data))});
-  return res.json();
+  try{
+    const res = await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({action, adminKey: ADMIN_KEY}, data))});
+    return await res.json();
+  }catch(err){
+    // Máy chủ Apps Script đôi khi "thức dậy" chậm vài giây ở lần gọi đầu, hoặc
+    // mạng bị gián đoạn — trước đây lỗi này bị nuốt im lặng khiến nút bấm như
+    // vô tác dụng. Giờ luôn trả về lỗi rõ ràng để nơi gọi hiện ra cho người dùng.
+    return { ok:false, error:'Không kết nối được máy chủ (có thể đang khởi động, đợi vài giây rồi thử lại).' };
+  }
 }
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2400); }
 function money(n){ n=Number(n)||0; return n.toLocaleString('vi-VN')+'đ'; }
@@ -163,13 +170,21 @@ function closeModal(){ $('#modal-bg').classList.remove('open'); }
 $('#modal-bg').addEventListener('click', e=>{ if(e.target.id==='modal-bg') closeModal(); });
 
 /* ================= ĐĂNG NHẬP ADMIN ================= */
-$('#btn-adminlogin').addEventListener('click', async ()=>{
+async function doAdminLogin(){
+  const btn = $('#btn-adminlogin');
+  if(btn.disabled) return; // chặn bấm liên tiếp khi đang chờ máy chủ trả lời
+  const oldText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
+  $('#login-err').style.display = 'none';
   ADMIN_KEY = $('#in-adminkey').value.trim();
   const r = await api('admin_login', {});
+  btn.disabled = false; btn.textContent = oldText;
   if(!r.ok){ $('#login-err').textContent = r.error; $('#login-err').style.display='block'; return; }
   localStorage.setItem('tdh_portal_admin_key', ADMIN_KEY);
   bootAdmin();
-});
+}
+$('#btn-adminlogin').addEventListener('click', doAdminLogin);
+$('#in-adminkey').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doAdminLogin(); } });
 function bootAdmin(){
   $('#login-screen').style.display='none';
   $('#app').style.display='block';
@@ -245,20 +260,58 @@ async function loadDishes(){
       <td><button class="btn btn-ghost btn-sm" onclick='editDish(${JSON.stringify(d)})'>Sửa</button></td>
     </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Chưa đọc được món nào — kiểm tra Sheet ID công thức gốc ở Cài đặt.</td></tr>';
 }
+let currentDishFileType = 'image';
 function editDish(d){
+  currentDishFileType = d.fileType || 'image';
   openModal(`<h3>${d.name}</h3>
-    <div class="field"><label>Link ảnh minh hoạ (dán link ảnh trên Drive/Internet)</label><input id="m-img" value="${d.imageUrl||''}"></div>
+    <div class="field">
+      <label>Ảnh minh hoạ hoặc file PDF công thức</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="m-upload" accept="image/*,.pdf" style="flex:1;min-width:180px">
+        <span id="m-upload-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0">Tải trực tiếp ảnh (JPG/PNG...) hoặc PDF, tối đa ~8MB. File sẽ tự lưu vào Google Drive riêng của Portal.</p>
+    </div>
+    <div class="field"><label>— hoặc dán link ảnh/PDF có sẵn (Drive/Internet)</label><input id="m-img" value="${d.imageUrl||''}"></div>
     <div class="field"><label>Mô tả ngắn</label><textarea id="m-desc" rows="3">${d.description||''}</textarea></div>
     <div class="field"><label>Danh mục (VD: Cà phê pha phin, Trà trái cây...)</label><input id="m-cat" value="${d.category||''}"></div>
     <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-order" value="${d.order||''}"></div>
     <div class="field"><label><input type="checkbox" id="m-pub" ${d.published?'checked':''} style="width:auto;margin-right:6px">Công bố cho học viên xem</label></div>
     <button class="btn btn-honey" id="m-save-dish">Lưu</button>`);
+
+  $('#m-upload').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const status = $('#m-upload-status');
+    status.textContent = 'Đang tải lên...';
+    try{
+      const base64 = await fileToBase64(file);
+      const r = await api('admin_upload_dish_media', { fileName:file.name, mimeType:file.type, base64 });
+      if(!r.ok){ status.textContent = ''; alert('Tải lên thất bại: ' + r.error); return; }
+      $('#m-img').value = r.url;
+      currentDishFileType = r.fileType;
+      status.textContent = '✅ Đã tải lên (' + (r.fileType==='pdf'?'PDF':'ảnh') + ') — nhớ bấm Lưu';
+    }catch(err){
+      status.textContent = '';
+      alert('Tải lên thất bại — thử lại hoặc dùng file nhỏ hơn.');
+    }
+  });
+
   $('#m-save-dish').addEventListener('click', async ()=>{
     const r = await api('admin_update_dish_meta', {dishId:d.id, data:{
       image_url:$('#m-img').value.trim(), description:$('#m-desc').value.trim(),
       category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(),
+      file_type: currentDishFileType,
       published: $('#m-pub').checked }});
     if(r.ok){ closeModal(); loadDishes(); toast('Đã lưu'); } else alert(r.error);
+  });
+}
+function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result.split(',')[1]); // bỏ phần "data:...;base64," ở đầu
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -324,12 +377,17 @@ async function loadSettings(){
   });
 }
 $('#btn-save-settings').addEventListener('click', async ()=>{
+  const btn = $('#btn-save-settings');
+  if(btn.disabled) return;
+  const oldText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
   const data = {};
   ['master_sheet_id','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
     data[k] = $('#s-'+k).value.trim();
   });
   const r = await api('admin_update_settings', {data});
-  if(r.ok) toast('Đã lưu cài đặt'); else alert(r.error);
+  btn.disabled = false; btn.textContent = oldText;
+  if(r.ok){ toast('Đã lưu cài đặt'); loadSettings(); } else alert('Lưu thất bại: ' + r.error);
 });
 </script>
 </body>
