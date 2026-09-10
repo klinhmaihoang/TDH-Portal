@@ -65,6 +65,9 @@
 
   /* ---------- Công thức ---------- */
   .cat-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px}
+  .recipe-mode-row{display:flex;gap:8px;margin-bottom:16px;background:var(--card);padding:5px;border-radius:14px;width:fit-content;box-shadow:var(--shadow)}
+  .mode-tab{background:none;border:none;padding:9px 18px;border-radius:10px;font-size:13.5px;font-weight:700;color:var(--muted)}
+  .mode-tab.active{background:var(--honey);color:var(--espresso)}
   .cat-chip{flex:none;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:7px 16px;font-size:13px;font-weight:600;color:var(--ink)}
   .cat-chip.active{background:var(--espresso);color:#fff;border-color:var(--espresso)}
   .dish-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
@@ -126,8 +129,9 @@
   .contact-card{background:var(--card);border-radius:16px;padding:18px;display:flex;gap:14px;align-items:center;box-shadow:var(--shadow);text-decoration:none;transition:.15s}
   .contact-card:hover{transform:translateY(-2px)}
   .contact-card .ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none;color:#fff}
+  .contact-card .txt{min-width:0;flex:1}
   .contact-card .txt strong{display:block;font-size:14.5px;color:var(--espresso)}
-  .contact-card .txt span{font-size:12.5px;color:var(--muted)}
+  .contact-card .txt span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;word-break:break-word;display:block}
   .ic-zalo{background:#0068FF}.ic-fb{background:#1877F2}.ic-mail{background:var(--sage)}.ic-group{background:var(--honey-dark)}
   .group-banner{margin-top:22px;background:linear-gradient(135deg,var(--honey),#F7C05C);border-radius:18px;padding:22px 24px;color:var(--espresso)}
   .group-banner h4{margin:0 0 6px;font-family:'Baloo 2',sans-serif;font-size:17px}
@@ -197,6 +201,10 @@
         <h2>Công thức đã học</h2>
         <p>Toàn bộ công thức cô đã dạy — bấm vào món để xem chi tiết cost & nguyên liệu.</p>
       </div>
+      <div class="recipe-mode-row">
+        <button class="mode-tab active" data-mode="dish">🍹 Món hoàn thiện</button>
+        <button class="mode-tab" data-mode="semi">🧪 Công thức nền</button>
+      </div>
       <div class="cat-row" id="cat-row"></div>
       <div class="dish-grid" id="dish-grid"></div>
       <div class="empty" id="dish-empty" style="display:none">
@@ -257,11 +265,11 @@
       <a id="modal-pdf-link" href="#" target="_blank" style="display:none;align-items:center;gap:8px;background:var(--honey-light);color:var(--honey-dark);font-weight:700;font-size:13.5px;padding:11px 14px;border-radius:12px;margin-bottom:16px;text-decoration:none">📄 Xem file PDF công thức</a>
       <div class="price-box">
         <div>
-          <div class="l1">Giá vốn</div>
+          <div class="l1" id="modal-l1-a">Giá vốn</div>
           <div class="l2" id="modal-cost">—</div>
         </div>
         <div style="text-align:right">
-          <div class="l1">Giá bán đề xuất</div>
+          <div class="l1" id="modal-l1-b">Giá bán đề xuất</div>
           <div class="l2" id="modal-price">—</div>
         </div>
       </div>
@@ -296,6 +304,8 @@ async function api(action, data){
 let TOKEN = localStorage.getItem('tdh_portal_token') || '';
 let SETTINGS = {};
 let DISHES = [];
+let SEMIS = [];
+let RECIPE_MODE = 'dish'; // 'dish' = Món hoàn thiện, 'semi' = Công thức nền
 let ACTIVE_CAT = 'Tất cả';
 
 const $ = sel => document.querySelector(sel);
@@ -371,38 +381,52 @@ function applySettingsToUI(){
     </a>`).join('');
 }
 
-/* ====================== CÔNG THỨC ====================== */
+/* ====================== CÔNG THỨC (Món hoàn thiện + Công thức nền) ====================== */
 async function loadDishes(){
   const r = await api('get_dishes', {token: TOKEN});
-  if(!r.ok) return;
-  DISHES = r.dishes || [];
+  if(r.ok) DISHES = r.dishes || [];
+  const r2 = await api('get_semis', {token: TOKEN});
+  if(r2.ok) SEMIS = r2.semis || [];
   renderCategories();
   renderDishes();
 }
+$$('.mode-tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    RECIPE_MODE = btn.dataset.mode;
+    ACTIVE_CAT = 'Tất cả';
+    $$('.mode-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCategories();
+    renderDishes();
+  });
+});
+function currentList(){ return RECIPE_MODE==='dish' ? DISHES : SEMIS; }
 function renderCategories(){
-  const cats = ['Tất cả', ...new Set(DISHES.map(d=>d.category||'Khác'))];
+  const cats = ['Tất cả', ...new Set(currentList().map(d=>d.category||'Khác'))];
   $('#cat-row').innerHTML = cats.map(c=>`<button class="cat-chip ${c===ACTIVE_CAT?'active':''}" data-cat="${c}">${c}</button>`).join('');
   $$('.cat-chip').forEach(b=>b.addEventListener('click', ()=>{ ACTIVE_CAT=b.dataset.cat; renderCategories(); renderDishes(); }));
 }
 function money(n){ n=Number(n)||0; return n.toLocaleString('vi-VN')+'đ'; }
 function renderDishes(){
-  const list = ACTIVE_CAT==='Tất cả' ? DISHES : DISHES.filter(d=>(d.category||'Khác')===ACTIVE_CAT);
+  const all = currentList();
+  const list = ACTIVE_CAT==='Tất cả' ? all : all.filter(d=>(d.category||'Khác')===ACTIVE_CAT);
   $('#dish-empty').style.display = list.length ? 'none':'block';
   $('#dish-grid').innerHTML = list.map(d=>`
     <div class="dish-card" data-id="${d.id}">
-      <div class="dish-thumb" style="${(d.imageUrl && d.fileType!=='pdf')?`background-image:url('${d.imageUrl}')`:''}">${d.fileType==='pdf'?'📄':(d.imageUrl?'':'🍹')}</div>
+      <div class="dish-thumb" style="${(d.imageUrl && d.fileType!=='pdf')?`background-image:url('${d.imageUrl}')`:''}">${d.fileType==='pdf'?'📄':(d.imageUrl?'':(RECIPE_MODE==='dish'?'🍹':'🧪'))}</div>
       <div class="dish-body">
         <div class="dish-cat">${d.category||'Khác'}</div>
         <div class="dish-name">${d.name}</div>
-        <div class="dish-price"><span class="label">Giá bán đề xuất</span>${money(d.suggestedPrice)}</div>
+        <div class="dish-price"><span class="label">${RECIPE_MODE==='dish'?'Giá bán đề xuất':'Giá thành / '+(d.yieldUnit||'đơn vị')}</span>${money(RECIPE_MODE==='dish'?d.suggestedPrice:d.unitCost)}</div>
       </div>
     </div>`).join('');
-  $$('.dish-card').forEach(c=>c.addEventListener('click', ()=>openDish(c.dataset.id)));
+  $$('.dish-card').forEach(c=>c.addEventListener('click', ()=>openRecipe(c.dataset.id)));
 }
-async function openDish(id){
-  const r = await api('get_dish_detail', {token: TOKEN, dishId:id});
+async function openRecipe(id){
+  const isDishMode = RECIPE_MODE==='dish';
+  const r = await api(isDishMode?'get_dish_detail':'get_semi_detail', isDishMode?{token:TOKEN, dishId:id}:{token:TOKEN, semiId:id});
   if(!r.ok){ alert(r.error||'Không tải được công thức'); return; }
-  const d = r.dish;
+  const d = isDishMode ? r.dish : r.semi;
   const isPdf = d.fileType === 'pdf';
   $('#modal-thumb').style.backgroundImage = (d.imageUrl && !isPdf) ? `url('${d.imageUrl}')` : 'none';
   $('#modal-thumb').textContent = isPdf ? '📄' : '';
@@ -415,8 +439,17 @@ async function openDish(id){
   $('#modal-cat').textContent = d.category||'Khác';
   $('#modal-name').textContent = d.name;
   $('#modal-desc').textContent = d.description||'';
-  $('#modal-cost').textContent = money(d.cost);
-  $('#modal-price').textContent = money(d.suggestedPrice);
+  if(isDishMode){
+    $('#modal-l1-a').textContent = 'Giá vốn';
+    $('#modal-l1-b').textContent = 'Giá bán đề xuất';
+    $('#modal-cost').textContent = money(d.cost);
+    $('#modal-price').textContent = money(d.suggestedPrice);
+  } else {
+    $('#modal-l1-a').textContent = 'Sản lượng';
+    $('#modal-l1-b').textContent = 'Giá thành / ' + (d.yieldUnit||'đơn vị');
+    $('#modal-cost').textContent = (d.yieldQty||0) + ' ' + (d.yieldUnit||'');
+    $('#modal-price').textContent = money(d.unitCost);
+  }
   $('#modal-components').innerHTML = (r.components||[]).map(c=>`
     <tr>
       <td>${c.name} ${c.typeLabel?`<span class="type-tag">${c.typeLabel}</span>`:''}</td>
