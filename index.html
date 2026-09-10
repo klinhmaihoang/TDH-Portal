@@ -51,6 +51,7 @@
   nav.tabs{display:flex;gap:2px;margin-left:auto}
   nav.tabs button{background:none;border:none;padding:9px 15px;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent}
   nav.tabs button.active{color:var(--ink);border-bottom-color:var(--gold)}
+  .badge-count{display:none;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;margin-left:5px;background:#A23B3B;color:#fff;font-size:10px;font-weight:700;border-radius:999px;vertical-align:2px}
   .hi{font-size:13px;color:var(--ink-soft);margin-right:6px;white-space:nowrap}
   .btn-logout{background:none;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--ink-soft)}
   .hamburger{display:none;background:none;border:none;font-size:22px;padding:6px}
@@ -178,7 +179,7 @@
       <nav class="tabs" id="nav-tabs">
         <button data-page="recipes" class="active">🍹 Công thức</button>
         <button data-page="files">📂 Thư viện</button>
-        <button data-page="news">📣 Thông báo</button>
+        <button data-page="news">📣 Thông báo<span class="badge-count" id="badge-thongbao"></span></button>
         <button data-page="contact">💬 Liên hệ</button>
       </nav>
       <span class="hi" id="hi-name"></span>
@@ -479,7 +480,9 @@ async function loadFiles(){
 }
 
 /* ====================== THÔNG BÁO ====================== */
+let LATEST_ANNOUNCEMENTS = [];
 function renderAnnouncements(list){
+  LATEST_ANNOUNCEMENTS = list;
   $('#ann-empty').style.display = list.length? 'none':'block';
   $('#ann-list').innerHTML = list.map(a=>`
     <div class="ann-card ${a.pinned?'pinned':''}">
@@ -488,6 +491,25 @@ function renderAnnouncements(list){
       <div class="date">${a.createdAt ? new Date(a.createdAt).toLocaleDateString('vi-VN') : ''}</div>
       <div class="content">${a.content}</div>
     </div>`).join('');
+  // Nếu học viên ĐANG mở sẵn tab Thông báo lúc có tin mới về (do tự động làm
+  // mới nền), coi như đã xem luôn — khỏi hiện chấm đỏ dù họ đang nhìn thấy rồi.
+  if($('#page-news').classList.contains('active')) markAnnouncementsSeen();
+  else updateAnnBadge();
+}
+// Đếm số thông báo học viên CHƯA từng xem — dựa trên mốc thời gian lần gần
+// nhất họ bấm vào tab Thông báo (lưu ở máy, riêng từng trình duyệt). Học viên
+// mới đăng nhập lần đầu (chưa có mốc lưu) thì coi như tất cả đều "mới".
+function updateAnnBadge(){
+  const badge = $('#badge-thongbao');
+  const lastSeen = localStorage.getItem('tdh_portal_ann_seen_at');
+  const lastSeenTime = lastSeen ? new Date(lastSeen).getTime() : 0;
+  const unread = LATEST_ANNOUNCEMENTS.filter(a => a.createdAt && new Date(a.createdAt).getTime() > lastSeenTime).length;
+  if(unread > 0){ badge.textContent = unread > 9 ? '9+' : unread; badge.style.display = 'inline-flex'; }
+  else { badge.style.display = 'none'; }
+}
+function markAnnouncementsSeen(){
+  localStorage.setItem('tdh_portal_ann_seen_at', new Date().toISOString());
+  updateAnnBadge();
 }
 
 /* ====================== ĐIỀU HƯỚNG TAB ====================== */
@@ -498,6 +520,7 @@ $$('nav.tabs button').forEach(btn=>{
     $$('.page').forEach(p=>p.classList.remove('active'));
     $('#page-'+btn.dataset.page).classList.add('active');
     $('#nav-tabs').classList.remove('open');
+    if(btn.dataset.page === 'news') markAnnouncementsSeen();
   });
 });
 $('#btn-hamburger').addEventListener('click', ()=> $('#nav-tabs').classList.toggle('open'));
