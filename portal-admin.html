@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Portal Học viên TDH Academy</title>
+<link rel="icon" href="logo-tdh.png">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--honey:#F0A319;--honey-dark:#C97F0A;--honey-light:#FBEBD3;--espresso:#2A1D02;--ink:#3B2A18;--muted:#8A7860;--cream:#FBF6EC;--card:#fff;--line:#EFE4CF;--sage:#6B8F71;--danger:#B3453D}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cream);color:var(--ink);font-family:'Be Vietnam Pro',sans-serif}
+  h1,h2,h3{font-family:'Baloo 2',sans-serif;color:var(--espresso)}
+  button{font-family:inherit;cursor:pointer}
+  input,textarea,select{font-family:inherit;font-size:14px;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:#FFFDF8}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--honey)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;padding:8px 6px;border-bottom:2px solid var(--line)}
+  td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .btn{border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700}
+  .btn-honey{background:var(--honey);color:var(--espresso)}
+  .btn-ghost{background:none;border:1.5px solid var(--line);color:var(--ink)}
+  .btn-danger{background:#FBEAEA;color:var(--danger)}
+  .btn-sm{padding:5px 10px;font-size:12px}
+
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center}
+  .login-card{background:#fff;border-radius:20px;padding:36px 30px;box-shadow:0 2px 14px rgba(42,29,2,.08);max-width:360px;width:100%;text-align:center}
+  .login-card img{width:80px;margin-bottom:10px}
+
+  #app{display:none}
+  .shell{display:flex;min-height:100vh}
+  aside{width:230px;flex:none;background:#fff;border-right:1px solid var(--line);padding:20px 14px}
+  aside .brand{display:flex;align-items:center;gap:10px;padding:0 6px 20px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  aside .brand img{width:34px;border-radius:9px}
+  aside .brand b{font-size:13.5px}
+  aside nav button{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:2px}
+  aside nav button.active{background:var(--honey-light);color:var(--espresso)}
+  main{flex:1;padding:26px 32px;max-width:1100px}
+  .panel{display:none}
+  .panel.active{display:block}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .panel-head h2{margin:0;font-size:20px}
+  .card{background:#fff;border-radius:16px;padding:18px 20px;box-shadow:0 2px 14px rgba(42,29,2,.05);margin-bottom:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--espresso)}
+  .field input,.field textarea,.field select{width:100%}
+  .badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px}
+  .badge-on{background:#E7F1E8;color:var(--sage)}
+  .badge-off{background:#F1EAE0;color:var(--muted)}
+  .code-pill{font-family:monospace;background:var(--honey-light);color:var(--honey-dark);padding:3px 8px;border-radius:6px;font-weight:700}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--espresso);color:#fff;padding:11px 20px;border-radius:10px;font-size:13.5px;display:none;z-index:99}
+  .modal-bg{position:fixed;inset:0;background:rgba(42,29,2,.4);display:none;align-items:center;justify-content:center;z-index:90}
+  .modal-bg.open{display:flex}
+  .modal{background:#fff;border-radius:18px;padding:24px;max-width:480px;width:92%;max-height:88vh;overflow-y:auto}
+  .modal h3{margin-top:0}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <img src="logo-tdh.png">
+    <h2 style="margin:6px 0 4px">Admin Portal</h2>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 18px">Trương Dáng Hương Academy</p>
+    <input type="password" id="in-adminkey" placeholder="Mã quản trị" style="width:100%;margin-bottom:10px">
+    <button class="btn btn-honey" style="width:100%" id="btn-adminlogin">Đăng nhập</button>
+    <p id="login-err" style="color:var(--danger);font-size:12.5px;margin-top:10px;display:none"></p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="shell">
+    <aside>
+      <div class="brand"><img src="logo-tdh.png"><b>Admin Portal</b></div>
+      <nav>
+        <button data-panel="students" class="active">👩‍🎓 Học viên</button>
+        <button data-panel="dishes">🍹 Công thức</button>
+        <button data-panel="files">📂 Thư viện file</button>
+        <button data-panel="announcements">📣 Thông báo</button>
+        <button data-panel="settings">⚙️ Cài đặt</button>
+      </nav>
+    </aside>
+    <main>
+
+      <!-- HỌC VIÊN -->
+      <section class="panel active" id="panel-students">
+        <div class="panel-head"><h2>Học viên được cấp quyền</h2><button class="btn btn-honey" id="btn-add-student">+ Thêm học viên</button></div>
+        <div class="card">
+          <table><thead><tr><th>Tên</th><th>SĐT</th><th>Mã truy cập</th><th>Ghi chú</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody id="tb-students"></tbody></table>
+        </div>
+      </section>
+
+      <!-- CÔNG THỨC -->
+      <section class="panel" id="panel-dishes">
+        <div class="panel-head"><h2>Công bố công thức</h2></div>
+        <p style="color:var(--muted);font-size:13px;margin-top:-8px">Danh sách món lấy trực tiếp từ Sheet công thức gốc (CostApp). Bấm vào món để thêm ảnh/mô tả và công bố cho học viên.</p>
+        <div class="card">
+          <table><thead><tr><th>Món</th><th>Giá vốn</th><th>Giá bán</th><th>Danh mục</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody id="tb-dishes"></tbody></table>
+        </div>
+      </section>
+
+      <!-- THƯ VIỆN -->
+      <section class="panel" id="panel-files">
+        <div class="panel-head"><h2>Thư viện file</h2><button class="btn btn-honey" id="btn-add-file">+ Thêm file</button></div>
+        <div class="card">
+          <table><thead><tr><th>Tên tài liệu</th><th>Danh mục</th><th>Ghi chú</th><th></th></tr></thead>
+          <tbody id="tb-files"></tbody></table>
+        </div>
+      </section>
+
+      <!-- THÔNG BÁO -->
+      <section class="panel" id="panel-announcements">
+        <div class="panel-head"><h2>Thông báo</h2><button class="btn btn-honey" id="btn-add-ann">+ Thêm thông báo</button></div>
+        <div class="card">
+          <table><thead><tr><th>Tiêu đề</th><th>Ghim</th><th>Ngày đăng</th><th></th></tr></thead>
+          <tbody id="tb-ann"></tbody></table>
+        </div>
+      </section>
+
+      <!-- CÀI ĐẶT -->
+      <section class="panel" id="panel-settings">
+        <div class="panel-head"><h2>Cài đặt</h2></div>
+        <div class="card">
+          <div class="grid2">
+            <div class="field"><label>Sheet ID công thức gốc (tài khoản CostApp chính)</label><input id="s-master_sheet_id"></div>
+            <div class="field"><label>Link app CostApp</label><input id="s-costapp_url"></div>
+            <div class="field"><label>Tên học viện</label><input id="s-academy_name"></div>
+            <div class="field"><label>SĐT Zalo học viện</label><input id="s-zalo_phone"></div>
+            <div class="field"><label>Link Facebook học viện</label><input id="s-facebook_url"></div>
+            <div class="field"><label>Email hỗ trợ</label><input id="s-email"></div>
+            <div class="field"><label>Link group cộng đồng</label><input id="s-group_url"></div>
+          </div>
+          <button class="btn btn-honey" id="btn-save-settings">Lưu cài đặt</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL DÙNG CHUNG -->
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal-body"></div></div>
+
+<script>
+const GAS_URL = 'DÁN_URL_WEB_APP_APPS_SCRIPT_PORTAL_VÀO_ĐÂY'; // giống hệt URL đã dán trong portal-hocvien.html
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+let ADMIN_KEY = localStorage.getItem('tdh_portal_admin_key') || '';
+
+async function api(action, data){
+  const res = await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(Object.assign({action, adminKey: ADMIN_KEY}, data))});
+  return res.json();
+}
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2400); }
+function money(n){ n=Number(n)||0; return n.toLocaleString('vi-VN')+'đ'; }
+function openModal(html){ $('#modal-body').innerHTML=html; $('#modal-bg').classList.add('open'); }
+function closeModal(){ $('#modal-bg').classList.remove('open'); }
+$('#modal-bg').addEventListener('click', e=>{ if(e.target.id==='modal-bg') closeModal(); });
+
+/* ================= ĐĂNG NHẬP ADMIN ================= */
+$('#btn-adminlogin').addEventListener('click', async ()=>{
+  ADMIN_KEY = $('#in-adminkey').value.trim();
+  const r = await api('admin_login', {});
+  if(!r.ok){ $('#login-err').textContent = r.error; $('#login-err').style.display='block'; return; }
+  localStorage.setItem('tdh_portal_admin_key', ADMIN_KEY);
+  bootAdmin();
+});
+function bootAdmin(){
+  $('#login-screen').style.display='none';
+  $('#app').style.display='block';
+  loadStudents(); loadDishes(); loadFiles(); loadAnn(); loadSettings();
+}
+if(ADMIN_KEY){ api('admin_login',{}).then(r=>{ if(r.ok) bootAdmin(); else $('#login-screen').style.display='flex'; }); }
+
+/* ================= ĐIỀU HƯỚNG ================= */
+$$('aside nav button').forEach(b=>b.addEventListener('click', ()=>{
+  $$('aside nav button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  $$('.panel').forEach(p=>p.classList.remove('active')); $('#panel-'+b.dataset.panel).classList.add('active');
+}));
+
+/* ================= HỌC VIÊN ================= */
+async function loadStudents(){
+  const r = await api('admin_list_students', {});
+  if(!r.ok) return;
+  $('#tb-students').innerHTML = (r.items||[]).map(s=>`
+    <tr>
+      <td>${s.name}</td><td>${s.phone}</td>
+      <td><span class="code-pill">${s.access_code}</span></td>
+      <td>${s.note||''}</td>
+      <td><span class="badge ${String(s.active).toUpperCase()==='TRUE'?'badge-on':'badge-off'}">${String(s.active).toUpperCase()==='TRUE'?'Hoạt động':'Đã khoá'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="regenCode('${s.id}')">Cấp mã mới</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleStudent('${s.id}','${s.active}')">${String(s.active).toUpperCase()==='TRUE'?'Khoá':'Mở khoá'}</button>
+        <button class="btn btn-danger btn-sm" onclick="delRow('students','${s.id}',loadStudents)">Xoá</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Chưa có học viên nào.</td></tr>';
+}
+$('#btn-add-student').addEventListener('click', ()=>{
+  openModal(`<h3>Thêm học viên</h3>
+    <div class="field"><label>Tên học viên</label><input id="m-name"></div>
+    <div class="field"><label>Số điện thoại</label><input id="m-phone"></div>
+    <div class="field"><label>Ghi chú (tuỳ chọn — VD: lớp Pha chế 12/2026)</label><input id="m-note"></div>
+    <button class="btn btn-honey" id="m-save">Thêm & sinh mã truy cập</button>`);
+  $('#m-save').addEventListener('click', async ()=>{
+    const r = await api('admin_add_student', {data:{name:$('#m-name').value.trim(), phone:$('#m-phone').value.trim(), note:$('#m-note').value.trim()}});
+    if(!r.ok){ alert(r.error); return; }
+    closeModal(); loadStudents();
+    openModal(`<h3>✅ Đã thêm học viên</h3><p>Mã truy cập: <span class="code-pill">${r.accessCode}</span></p>
+      <p style="font-size:13px;color:var(--muted)">Gửi số điện thoại đã nhập + mã này cho học viên qua Zalo để họ tự đăng nhập vào Portal.</p>
+      <button class="btn btn-honey" onclick="closeModal()">Đóng</button>`);
+  });
+});
+async function regenCode(id){
+  if(!confirm('Cấp mã truy cập mới? Mã cũ sẽ không dùng được nữa.')) return;
+  const r = await api('admin_regenerate_code', {id});
+  if(r.ok){ toast('Mã mới: '+r.accessCode); loadStudents(); } else alert(r.error);
+}
+async function toggleStudent(id, active){
+  const next = String(active).toUpperCase()==='TRUE' ? 'FALSE' : 'TRUE';
+  await api('admin_update_student', {id, data:{active: next}});
+  loadStudents();
+}
+// Xoá riêng theo từng bảng (action tên khác nhau ở backend)
+async function delRow(tab, id, reload){
+  if(!confirm('Xoá dòng này?')) return;
+  const actionMap = {students:'admin_delete_student', files:'admin_delete_file', announcements:'admin_delete_announcement'};
+  const r = await api(actionMap[tab], {id});
+  if(r.ok) reload(); else alert(r.error);
+}
+
+/* ================= CÔNG THỨC ================= */
+async function loadDishes(){
+  const r = await api('admin_list_dishes', {});
+  if(!r.ok) return;
+  $('#tb-dishes').innerHTML = (r.dishes||[]).map(d=>`
+    <tr>
+      <td>${d.name}</td><td>${money(d.cost)}</td><td>${money(d.suggestedPrice)}</td>
+      <td>${d.category||'—'}</td>
+      <td><span class="badge ${d.published?'badge-on':'badge-off'}">${d.published?'Đã công bố':'Chưa công bố'}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick='editDish(${JSON.stringify(d)})'>Sửa</button></td>
+    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Chưa đọc được món nào — kiểm tra Sheet ID công thức gốc ở Cài đặt.</td></tr>';
+}
+function editDish(d){
+  openModal(`<h3>${d.name}</h3>
+    <div class="field"><label>Link ảnh minh hoạ (dán link ảnh trên Drive/Internet)</label><input id="m-img" value="${d.imageUrl||''}"></div>
+    <div class="field"><label>Mô tả ngắn</label><textarea id="m-desc" rows="3">${d.description||''}</textarea></div>
+    <div class="field"><label>Danh mục (VD: Cà phê pha phin, Trà trái cây...)</label><input id="m-cat" value="${d.category||''}"></div>
+    <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-order" value="${d.order||''}"></div>
+    <div class="field"><label><input type="checkbox" id="m-pub" ${d.published?'checked':''} style="width:auto;margin-right:6px">Công bố cho học viên xem</label></div>
+    <button class="btn btn-honey" id="m-save-dish">Lưu</button>`);
+  $('#m-save-dish').addEventListener('click', async ()=>{
+    const r = await api('admin_update_dish_meta', {dishId:d.id, data:{
+      image_url:$('#m-img').value.trim(), description:$('#m-desc').value.trim(),
+      category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(),
+      published: $('#m-pub').checked }});
+    if(r.ok){ closeModal(); loadDishes(); toast('Đã lưu'); } else alert(r.error);
+  });
+}
+
+/* ================= THƯ VIỆN FILE ================= */
+async function loadFiles(){
+  const r = await api('admin_list_files', {});
+  if(!r.ok) return;
+  $('#tb-files').innerHTML = (r.items||[]).map(f=>`
+    <tr><td>${f.title}</td><td>${f.category||''}</td><td>${f.note||''}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick='editFile(${JSON.stringify(f)})'>Sửa</button>
+    <button class="btn btn-danger btn-sm" onclick="delRow('files','${f.id}',loadFiles)">Xoá</button></td></tr>`).join('')
+    || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có tài liệu nào.</td></tr>';
+}
+$('#btn-add-file').addEventListener('click', ()=>editFile({}));
+function editFile(f){
+  const isNew = !f.id;
+  openModal(`<h3>${isNew?'Thêm':'Sửa'} tài liệu</h3>
+    <div class="field"><label>Tên tài liệu</label><input id="m-title" value="${f.title||''}"></div>
+    <div class="field"><label>Danh mục (VD: Danh sách nguyên liệu, Công cụ dụng cụ...)</label><input id="m-cat" value="${f.category||''}"></div>
+    <div class="field"><label>Link file (Google Drive — chia sẻ ở chế độ "Bất kỳ ai có link")</label><input id="m-url" value="${f.file_url||''}"></div>
+    <div class="field"><label>Ghi chú (tuỳ chọn)</label><input id="m-note" value="${f.note||''}"></div>
+    <button class="btn btn-honey" id="m-save">Lưu</button>`);
+  $('#m-save').addEventListener('click', async ()=>{
+    const data = {title:$('#m-title').value.trim(), category:$('#m-cat').value.trim(), file_url:$('#m-url').value.trim(), note:$('#m-note').value.trim()};
+    const r = isNew ? await api('admin_add_file',{data}) : await api('admin_update_file',{id:f.id, data});
+    if(r.ok){ closeModal(); loadFiles(); toast('Đã lưu'); } else alert(r.error);
+  });
+}
+
+/* ================= THÔNG BÁO ================= */
+async function loadAnn(){
+  const r = await api('admin_list_announcements', {});
+  if(!r.ok) return;
+  $('#tb-ann').innerHTML = (r.items||[]).map(a=>`
+    <tr><td>${a.title}</td><td>${String(a.pinned).toUpperCase()==='TRUE'?'📌':''}</td>
+    <td>${a.created_at ? new Date(a.created_at).toLocaleDateString('vi-VN') : ''}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick='editAnn(${JSON.stringify(a)})'>Sửa</button>
+    <button class="btn btn-danger btn-sm" onclick="delRow('announcements','${a.id}',loadAnn)">Xoá</button></td></tr>`).join('')
+    || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có thông báo nào.</td></tr>';
+}
+$('#btn-add-ann').addEventListener('click', ()=>editAnn({}));
+function editAnn(a){
+  const isNew = !a.id;
+  openModal(`<h3>${isNew?'Thêm':'Sửa'} thông báo</h3>
+    <div class="field"><label>Tiêu đề</label><input id="m-title" value="${a.title||''}"></div>
+    <div class="field"><label>Nội dung</label><textarea id="m-content" rows="5">${a.content||''}</textarea></div>
+    <div class="field"><label><input type="checkbox" id="m-pin" ${String(a.pinned).toUpperCase()==='TRUE'?'checked':''} style="width:auto;margin-right:6px">Ghim lên đầu</label></div>
+    <button class="btn btn-honey" id="m-save">Lưu</button>`);
+  $('#m-save').addEventListener('click', async ()=>{
+    const data = {title:$('#m-title').value.trim(), content:$('#m-content').value.trim(), pinned: $('#m-pin').checked};
+    const r = isNew ? await api('admin_add_announcement',{data}) : await api('admin_update_announcement',{id:a.id, data});
+    if(r.ok){ closeModal(); loadAnn(); toast('Đã lưu'); } else alert(r.error);
+  });
+}
+
+/* ================= CÀI ĐẶT ================= */
+async function loadSettings(){
+  const r = await api('admin_get_settings', {});
+  if(!r.ok) return;
+  const s = r.settings||{};
+  ['master_sheet_id','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+    if($('#s-'+k)) $('#s-'+k).value = s[k]||'';
+  });
+}
+$('#btn-save-settings').addEventListener('click', async ()=>{
+  const data = {};
+  ['master_sheet_id','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+    data[k] = $('#s-'+k).value.trim();
+  });
+  const r = await api('admin_update_settings', {data});
+  if(r.ok) toast('Đã lưu cài đặt'); else alert(r.error);
+});
+</script>
+</body>
+</html>
