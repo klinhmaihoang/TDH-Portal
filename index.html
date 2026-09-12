@@ -195,6 +195,7 @@
       <nav class="tabs" id="nav-tabs">
         <button data-page="recipes" class="active">🍹 Công thức</button>
         <button data-page="files">📂 Thư viện</button>
+        <button data-page="shopping">🛒 Mua sắm</button>
         <button data-page="news">📣 Thông báo<span class="badge-count" id="badge-thongbao"></span></button>
         <button data-page="contact">💬 Liên hệ</button>
       </nav>
@@ -239,6 +240,18 @@
       </div>
     </section>
 
+    <!-- MUA SẮM -->
+    <section class="page" id="page-shopping">
+      <div class="page-head">
+        <h2>Mua sắm dụng cụ & nguyên liệu</h2>
+        <p>Link đặt mua nhanh — bấm vào để mở thẳng trang bán hàng.</p>
+      </div>
+      <div class="file-list" id="shopping-list"></div>
+      <div class="empty" id="shopping-empty" style="display:none">
+        <div class="ic">🛒</div>Chưa có link mua sắm nào được đăng.
+      </div>
+    </section>
+
     <!-- THÔNG BÁO -->
     <section class="page" id="page-news">
       <div class="page-head">
@@ -276,7 +289,7 @@
 
 <script>
 /* ====================== CẤU HÌNH ====================== */
-const GAS_URL = ' https://tdh-portal.klinh-maihoang.workers.dev'; // lấy từ Deploy > Manage deployments
+const GAS_URL = 'https://tdh-portal.klinh-maihoang.workers.dev'; // lấy từ Deploy > Manage deployments
 
 /* ====================== GỌI BACKEND ====================== */
 async function api(action, data){
@@ -360,6 +373,7 @@ function applyPortalData(data){
   renderCategories();
   renderDishes();
   renderFiles(data.files||[]);
+  renderShoppingLinks(data.shoppingLinks||[]);
 }
 /* ====================== TỰ ĐỘNG CẬP NHẬT (không cần bấm reload) ======================
  * Học viên thường không biết admin vừa đăng công thức/thông báo mới để chủ động
@@ -532,6 +546,15 @@ function renderFiles(files){
       <div class="file-ic">📄</div>
       <div class="file-meta"><div class="t">${escapeHtml(f.title)}</div><div class="c">${escapeHtml(f.category||'')}${f.note?' · '+escapeHtml(f.note):''}</div></div>
       <a class="file-dl" href="${f.fileUrl}" target="_blank">Tải về</a>
+    </div>`).join('');
+}
+function renderShoppingLinks(items){
+  $('#shopping-empty').style.display = items.length? 'none':'block';
+  $('#shopping-list').innerHTML = items.map(s=>`
+    <div class="file-row">
+      <div class="file-ic">🛒</div>
+      <div class="file-meta"><div class="t">${escapeHtml(s.title)}</div><div class="c">${escapeHtml(s.category||'')}${s.note?' · '+escapeHtml(s.note):''}</div></div>
+      <a class="file-dl" href="${s.url}" target="_blank">Mở link</a>
     </div>`).join('');
 }
 
