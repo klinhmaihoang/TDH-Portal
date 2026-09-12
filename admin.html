@@ -99,7 +99,7 @@
         <p style="color:var(--muted);font-size:13px;margin-top:-8px">Danh sách món lấy trực tiếp từ Sheet công thức gốc (CostApp). Bấm vào món để thêm ảnh/mô tả và công bố cho học viên.</p>
         <input type="text" id="search-dishes" placeholder="🔎 Tìm món theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
-          <table><thead><tr><th>Món</th><th>Giá vốn</th><th>Giá bán</th><th>Danh mục</th><th>Trạng thái</th><th></th></tr></thead>
+          <table><thead><tr><th>Món</th><th>Giá vốn</th><th>Giá bán</th><th>Danh mục</th><th>Thứ tự</th><th>Trạng thái</th><th></th></tr></thead>
           <tbody id="tb-dishes"></tbody></table>
         </div>
       </section>
@@ -110,7 +110,7 @@
         <p style="color:var(--muted);font-size:13px;margin-top:-8px">Bán thành phẩm (cốt trà, siro, nước đường...) lấy từ Sheet công thức gốc — công bố để học viên xem cả công thức nền, không chỉ món hoàn thiện.</p>
         <input type="text" id="search-semis" placeholder="🔎 Tìm công thức nền theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
-          <table><thead><tr><th>Tên</th><th>Sản lượng</th><th>Giá thành/đơn vị</th><th>Danh mục</th><th>Trạng thái</th><th></th></tr></thead>
+          <table><thead><tr><th>Tên</th><th>Sản lượng</th><th>Giá thành/đơn vị</th><th>Danh mục</th><th>Thứ tự</th><th>Trạng thái</th><th></th></tr></thead>
           <tbody id="tb-semis"></tbody></table>
         </div>
       </section>
@@ -288,9 +288,10 @@ function renderDishTable(list){
     <tr>
       <td>${d.name}</td><td>${money(d.cost)}</td><td>${money(d.suggestedPrice)}</td>
       <td>${d.category||'—'}</td>
+      <td>${d.order||'—'}</td>
       <td><span class="badge ${d.published?'badge-on':'badge-off'}">${d.published?'Đã công bố':'Chưa công bố'}</span></td>
       <td><button class="btn btn-ghost btn-sm" onclick='editDish(${jsonAttr(d)})'>Sửa</button></td>
-    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy món nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy món nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
 }
 $('#search-dishes').addEventListener('input', e=>{
   const q = stripDiacritics(e.target.value.trim());
@@ -371,9 +372,10 @@ function renderSemiTable(list){
     <tr>
       <td>${s.name}</td><td>${s.yieldQty||''} ${s.yieldUnit||''}</td><td>${money(s.unitCost)}</td>
       <td>${s.category||'—'}</td>
+      <td>${s.order||'—'}</td>
       <td><span class="badge ${s.published?'badge-on':'badge-off'}">${s.published?'Đã công bố':'Chưa công bố'}</span></td>
       <td><button class="btn btn-ghost btn-sm" onclick='editSemi(${jsonAttr(s)})'>Sửa</button></td>
-    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy công thức nền nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy công thức nền nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
 }
 $('#search-semis').addEventListener('input', e=>{
   const q = stripDiacritics(e.target.value.trim());
