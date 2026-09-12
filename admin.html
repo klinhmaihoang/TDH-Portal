@@ -139,7 +139,6 @@
         <div class="card">
           <div class="grid2">
             <div class="field"><label>Sheet ID công thức gốc (tài khoản CostApp chính)</label><input id="s-master_sheet_id"></div>
-            <div class="field"><label>ID folder Drive lưu ảnh/PDF (đã chia sẻ cho service account)</label><input id="s-drive_folder_id"></div>
             <div class="field"><label>Link app CostApp</label><input id="s-costapp_url"></div>
             <div class="field"><label>Tên học viện</label><input id="s-academy_name"></div>
             <div class="field"><label>SĐT Zalo học viện</label><input id="s-zalo_phone"></div>
@@ -176,7 +175,7 @@
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal-body"></div></div>
 
 <script>
-const GAS_URL = ' https://tdh-portal.klinh-maihoang.workers.dev'; // giống hệt URL đã dán trong portal-hocvien.html
+const GAS_URL = 'https://tdh-portal.klinh-maihoang.workers.dev'; // giống hệt URL đã dán trong portal-hocvien.html
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 // Dùng khi nhúng dữ liệu vào thuộc tính onclick='...' bọc bởi DẤU NHÁY ĐƠN —
 // nếu tên món/file/thông báo có chứa dấu nháy đơn thật (VD "Trà L'Amour"),
@@ -516,7 +515,7 @@ async function loadSettings(){
   const r = await api('admin_get_settings', {});
   if(!r.ok) return;
   const s = r.settings||{};
-  ['master_sheet_id','drive_folder_id','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+  ['master_sheet_id','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
     if($('#s-'+k)) $('#s-'+k).value = s[k]||'';
   });
 }
@@ -526,7 +525,7 @@ $('#btn-save-settings').addEventListener('click', async ()=>{
   const oldText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Đang lưu...';
   const data = {};
-  ['master_sheet_id','drive_folder_id','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+  ['master_sheet_id','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
     data[k] = $('#s-'+k).value.trim();
   });
   const r = await api('admin_update_settings', {data});
