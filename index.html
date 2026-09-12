@@ -78,6 +78,12 @@
   @media(max-width:920px){.dish-grid{grid-template-columns:1fr}}
   .dish-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
   .dish-thumb-sm{width:56px;height:56px;border-radius:8px;background:var(--gold-tint) center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--gold-deep);font-size:20px}
+  .dish-thumb-sm.zoomable{cursor:pointer;transition:transform .12s}
+  .dish-thumb-sm.zoomable:hover{transform:scale(1.06)}
+  .lightbox-bg{position:fixed;inset:0;background:rgba(20,15,8,.85);display:none;align-items:center;justify-content:center;z-index:90;padding:24px}
+  .lightbox-bg.open{display:flex}
+  .lightbox-bg img{max-width:min(90vw,640px);max-height:85vh;border-radius:12px;display:block}
+  .lightbox-close{position:absolute;top:20px;right:24px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer}
   .dish-header{display:flex;gap:12px;align-items:flex-start;margin-bottom:6px}
   .dish-header-txt{flex:1;min-width:0;padding-top:2px}
   .dish-body{padding:20px 22px 22px}
@@ -262,6 +268,12 @@
   </main>
 </div>
 
+<!-- Bấm vào ảnh nhỏ ở góc thẻ công thức để xem to hơn -->
+<div class="lightbox-bg" id="lightbox-bg">
+  <button class="lightbox-close" id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
 <script>
 /* ====================== CẤU HÌNH ====================== */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzQPhG81JJhpWXJ_fHHmnQXZhzbPIZnZ0eKgts1LoUak9wTE6fszD0liZGMNszMOrBg/exec'; // lấy từ Deploy > Manage deployments
@@ -442,7 +454,7 @@ function renderDishes(){
     // nhìn rất xấu. Món không có ảnh thì bỏ hẳn ô này, không hiện khung trống.
     const thumb = isPdf
       ? `<div class="dish-thumb-sm">📄</div>`
-      : (d.imageUrl ? `<div class="dish-thumb-sm" style="background-image:url('${d.imageUrl}')"></div>` : '');
+      : (d.imageUrl ? `<div class="dish-thumb-sm zoomable" data-img="${d.imageUrl}" style="background-image:url('${d.imageUrl}')"></div>` : '');
     const pdfLink = (isPdf && d.imageUrl) ? `<a class="pdf-link" href="${d.imageUrl}" target="_blank">📄 Xem file PDF công thức</a>` : '';
     // Ghi chú công thức tính giá bán — ĐÚNG NGUYÊN VĂN công thức thật lấy từ
     // suggestedPrice() trong CostApp (index.html): giá vốn nhân (1 + % vận
@@ -497,6 +509,20 @@ function renderDishes(){
 function escapeHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+/* ====================== XEM ẢNH TO (bấm vào ảnh nhỏ góc thẻ công thức) ======================
+ * Dùng "event delegation" — gắn 1 sự kiện duy nhất lên #dish-grid (thay vì
+ * gắn riêng từng thẻ ảnh), vì các thẻ .dish-thumb-sm được tạo lại mỗi lần
+ * renderDishes() chạy (kể cả lúc tự làm mới nền) — gắn lên phần tử cha 1 lần
+ * là đủ, không cần gắn lại mỗi lần render. */
+$('#dish-grid').addEventListener('click', e=>{
+  const thumb = e.target.closest('.zoomable');
+  if(!thumb) return;
+  $('#lightbox-img').src = thumb.dataset.img;
+  $('#lightbox-bg').classList.add('open');
+});
+$('#lightbox-close').addEventListener('click', ()=> $('#lightbox-bg').classList.remove('open'));
+$('#lightbox-bg').addEventListener('click', e=>{ if(e.target.id==='lightbox-bg') $('#lightbox-bg').classList.remove('open'); });
 
 /* ====================== THƯ VIỆN ====================== */
 function renderFiles(files){
