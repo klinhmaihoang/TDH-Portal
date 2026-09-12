@@ -78,6 +78,7 @@
         <button data-panel="dishes">🍹 Món hoàn thiện</button>
         <button data-panel="semis">🧪 Công thức nền</button>
         <button data-panel="files">📂 Thư viện file</button>
+        <button data-panel="shopping">🛒 Mua sắm</button>
         <button data-panel="announcements">📣 Thông báo</button>
         <button data-panel="settings">⚙️ Cài đặt</button>
       </nav>
@@ -121,6 +122,16 @@
         <div class="card">
           <table><thead><tr><th>Tên tài liệu</th><th>Danh mục</th><th>Ghi chú</th><th></th></tr></thead>
           <tbody id="tb-files"></tbody></table>
+        </div>
+      </section>
+
+      <!-- MUA SẮM -->
+      <section class="panel" id="panel-shopping">
+        <div class="panel-head"><h2>Link mua sắm dụng cụ & nguyên liệu</h2><button class="btn btn-honey" id="btn-add-shopping">+ Thêm link</button></div>
+        <p style="color:var(--muted);font-size:13px;margin-top:-8px">Link đặt mua nhanh (website công ty, Shopee...) — học viên bấm là mở thẳng trang bán hàng.</p>
+        <div class="card">
+          <table><thead><tr><th>Tên</th><th>Danh mục</th><th>Ghi chú</th><th></th></tr></thead>
+          <tbody id="tb-shopping"></tbody></table>
         </div>
       </section>
 
@@ -175,7 +186,7 @@
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal-body"></div></div>
 
 <script>
-const GAS_URL = 'https://tdh-portal.klinh-maihoang.workers.dev'; // giống hệt URL đã dán trong portal-hocvien.html
+const GAS_URL = '  https://tdh-portal.klinh-maihoang.workers.dev'; // giống hệt URL đã dán trong portal-hocvien.html
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 // Dùng khi nhúng dữ liệu vào thuộc tính onclick='...' bọc bởi DẤU NHÁY ĐƠN —
 // nếu tên món/file/thông báo có chứa dấu nháy đơn thật (VD "Trà L'Amour"),
@@ -221,7 +232,7 @@ $('#in-adminkey').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preven
 function bootAdmin(){
   $('#login-screen').style.display='none';
   $('#app').style.display='block';
-  loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadAnn(); loadSettings();
+  loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadShopping(); loadAnn(); loadSettings();
 }
 if(ADMIN_KEY){ api('admin_login',{}).then(r=>{ if(r.ok) bootAdmin(); else $('#login-screen').style.display='flex'; }); }
 
@@ -280,7 +291,7 @@ async function toggleStudent(id, active){
 // Xoá riêng theo từng bảng (action tên khác nhau ở backend)
 async function delRow(tab, id, reload){
   if(!confirm('Xoá dòng này?')) return;
-  const actionMap = {students:'admin_delete_student', files:'admin_delete_file', announcements:'admin_delete_announcement'};
+  const actionMap = {students:'admin_delete_student', files:'admin_delete_file', shopping:'admin_delete_shopping_link', announcements:'admin_delete_announcement'};
   const r = await api(actionMap[tab], {id});
   if(r.ok) reload(); else alert(r.error);
 }
@@ -479,6 +490,37 @@ function editFile(f){
   });
 }
 
+/* ================= MUA SẮM ================= */
+async function loadShopping(){
+  const r = await api('admin_list_shopping_links', {});
+  if(!r.ok) return;
+  $('#tb-shopping').innerHTML = (r.items||[]).map(s=>`
+    <tr><td>${s.title}</td><td>${s.category||''}</td><td>${s.note||''}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick='editShopping(${jsonAttr(s)})'>Sửa</button>
+    <button class="btn btn-danger btn-sm" onclick="delRow('shopping','${s.id}',loadShopping)">Xoá</button></td></tr>`).join('')
+    || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có link mua sắm nào.</td></tr>';
+}
+$('#btn-add-shopping').addEventListener('click', ()=>editShopping({}));
+function editShopping(s){
+  const isNew = !s.id;
+  openModal(`<h3>${isNew?'Thêm':'Sửa'} link mua sắm</h3>
+    <div class="field"><label>Tên (VD: Ly nhựa 360ml, Bột trà xanh Nhật...)</label><input id="m-title" value="${s.title||''}"></div>
+    <div class="field"><label>Danh mục (VD: Dụng cụ pha chế, Nguyên liệu...)</label><input id="m-cat" value="${s.category||''}"></div>
+    <div class="field"><label>Link mua (website công ty, Shopee...)</label><input id="m-url" value="${s.url||''}"></div>
+    <div class="field"><label>Ghi chú (tuỳ chọn — VD: nơi bán rẻ nhất)</label><input id="m-note" value="${s.note||''}"></div>
+    <button class="btn btn-honey" id="m-save">Lưu</button>`);
+  $('#m-save').addEventListener('click', async ()=>{
+    const btn = $('#m-save');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+    const data = {title:$('#m-title').value.trim(), category:$('#m-cat').value.trim(), url:$('#m-url').value.trim(), note:$('#m-note').value.trim()};
+    const r = isNew ? await api('admin_add_shopping_link',{data}) : await api('admin_update_shopping_link',{id:s.id, data});
+    if(r.ok){ closeModal(); loadShopping(); toast('Đã lưu'); }
+    else { btn.disabled=false; btn.textContent=oldText; alert('Lưu thất bại: ' + r.error); }
+  });
+}
+
 /* ================= THÔNG BÁO ================= */
 async function loadAnn(){
   const r = await api('admin_list_announcements', {});
@@ -572,7 +614,7 @@ $('#btn-import-backup').addEventListener('click', async ()=>{
     const r = await api('admin_import_backup', {backup});
     if(r.ok){
       toast('Đã khôi phục ' + r.restored + ' dòng dữ liệu');
-      loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadAnn(); loadSettings();
+      loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadShopping(); loadAnn(); loadSettings();
     } else alert('Khôi phục thất bại: ' + r.error);
   }catch(err){
     alert('File backup không hợp lệ (không đọc được dạng JSON).');
