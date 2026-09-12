@@ -77,7 +77,9 @@
   .dish-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:20px;align-items:start}
   @media(max-width:920px){.dish-grid{grid-template-columns:1fr}}
   .dish-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-  .dish-thumb{aspect-ratio:16/9;background:var(--gold-tint) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--gold-deep);font-size:28px;opacity:.9}
+  .dish-thumb-sm{width:56px;height:56px;border-radius:8px;background:var(--gold-tint) center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--gold-deep);font-size:20px}
+  .dish-header{display:flex;gap:12px;align-items:flex-start;margin-bottom:6px}
+  .dish-header-txt{flex:1;min-width:0;padding-top:2px}
   .dish-body{padding:20px 22px 22px}
   .dish-cat{font-size:11.5px;font-weight:600;color:var(--sage);letter-spacing:.01em}
   .dish-name{font-family:'Lora',serif;font-weight:600;font-size:19px;margin:5px 0 8px;color:var(--ink)}
@@ -150,19 +152,27 @@
     <img class="logo" src="logo-tdh.png" alt="Trương Dáng Hương Academy">
     <h1>Cổng học viên</h1>
     <p class="sub">Trương Dáng Hương Academy</p>
-    <form id="login-form">
-      <div class="field">
-        <label>Số điện thoại</label>
-        <input type="tel" id="in-phone" placeholder="09xx xxx xxx" required>
-      </div>
-      <div class="field">
-        <label>Mã truy cập</label>
-        <input type="text" id="in-code" placeholder="Mã học viện đã gửi cho bạn" required style="text-transform:uppercase">
-      </div>
-      <button class="btn-primary" type="submit" id="btn-login">Vào cổng học viên</button>
-    </form>
-    <div class="login-err" id="login-err"></div>
-    <div class="login-help">Chưa có mã truy cập? <a href="#" id="help-zalo-link">Nhắn Zalo cho học viện</a></div>
+    <div id="login-form-wrap">
+      <form id="login-form">
+        <div class="field">
+          <label>Số điện thoại</label>
+          <input type="tel" id="in-phone" placeholder="09xx xxx xxx" required>
+        </div>
+        <div class="field">
+          <label>Mã truy cập</label>
+          <input type="text" id="in-code" placeholder="Mã học viện đã gửi cho bạn" required style="text-transform:uppercase">
+        </div>
+        <button class="btn-primary" type="submit" id="btn-login">Vào cổng học viên</button>
+      </form>
+      <div class="login-err" id="login-err"></div>
+      <div class="login-help">Chưa có mã truy cập? <a href="#" id="help-zalo-link">Nhắn Zalo cho học viện</a></div>
+    </div>
+    <!-- Hiện khi ĐÃ đăng nhập (còn token) nhưng tải dữ liệu bị lỗi tạm thời
+         (mạng/máy chủ) — KHÔNG đăng xuất, chỉ cho thử lại, giữ nguyên phiên. -->
+    <div id="boot-retry-box" style="display:none">
+      <p style="color:var(--ink-soft);font-size:13.5px;margin:0 0 18px;line-height:1.5" id="boot-retry-msg"></p>
+      <button class="btn-primary" id="btn-boot-retry">🔄 Thử lại</button>
+    </div>
   </div>
 </div>
 
@@ -301,16 +311,29 @@ function showLoginErr(msg){
 
 /* ====================== KHỞI ĐỘNG APP SAU ĐĂNG NHẬP ====================== */
 async function boot(){
+  $('#boot-retry-box').style.display = 'none';
+  $('#login-form-wrap').style.display = 'block';
   // Gọi gộp 1 lần duy nhất (thay vì 4 lệnh riêng) để tải trang lần đầu nhanh
   // hơn — xem chú thích đầy đủ ở silentRefresh() bên dưới.
   const data = await api('get_portal_data', {token: TOKEN});
-  if(!data.ok){ logout(); return; }
+  if(!data.ok){
+    if(data.error === 'expired'){ logout(); return; }
+    // LỖI TẠM THỜI (mạng/máy chủ đang chập chờn) — KHÔNG được coi như hết
+    // phiên đăng nhập rồi tự đăng xuất (lỗi trước đây: mỗi lần tải bị lỗi
+    // thoáng qua là mất token, phải đăng nhập lại từ đầu dù chưa hề hết hạn
+    // 21 ngày). Giữ nguyên token, chỉ báo lỗi + cho thử lại.
+    $('#login-form-wrap').style.display = 'none';
+    $('#boot-retry-msg').textContent = 'Không tải được dữ liệu (' + (data.error||'lỗi không rõ') + '). Có thể máy chủ đang tạm gián đoạn — thử lại sau vài giây.';
+    $('#boot-retry-box').style.display = 'block';
+    return;
+  }
   applyPortalData(data);
   $('#login-screen').style.display='none';
   $('#app-screen').style.display='block';
   $('#hi-name').textContent = 'Chào, ' + (localStorage.getItem('tdh_portal_name')||'bạn');
   setupAutoRefresh();
 }
+$('#btn-boot-retry').addEventListener('click', boot);
 // Áp toàn bộ dữ liệu 1 lượt gọi get_portal_data vào giao diện — dùng chung
 // cho cả lần tải trang đầu tiên lẫn mỗi lần tự làm mới nền. Không xoá trắng
 // khung nào trước khi vẽ lại — các hàm render đều thay thế nội dung trong 1
@@ -414,9 +437,12 @@ function renderDishes(){
   $('#dish-empty').style.display = list.length ? 'none':'block';
   $('#dish-grid').innerHTML = list.map(d=>{
     const isPdf = d.fileType === 'pdf';
+    // Ảnh giờ chỉ là 1 ô nhỏ góc trên (56x56), KHÔNG còn banner to chiếm hết
+    // đầu thẻ như trước — vì nhiều món chưa có ảnh, để banner to trống trơn
+    // nhìn rất xấu. Món không có ảnh thì bỏ hẳn ô này, không hiện khung trống.
     const thumb = isPdf
-      ? `<div class="dish-thumb">📄</div>`
-      : `<div class="dish-thumb" style="${d.imageUrl?`background-image:url('${d.imageUrl}')`:''}">${d.imageUrl?'':(RECIPE_MODE==='dish'?'🍹':'🧪')}</div>`;
+      ? `<div class="dish-thumb-sm">📄</div>`
+      : (d.imageUrl ? `<div class="dish-thumb-sm" style="background-image:url('${d.imageUrl}')"></div>` : '');
     const pdfLink = (isPdf && d.imageUrl) ? `<a class="pdf-link" href="${d.imageUrl}" target="_blank">📄 Xem file PDF công thức</a>` : '';
     // Ghi chú công thức tính giá bán — ĐÚNG NGUYÊN VĂN công thức thật lấy từ
     // suggestedPrice() trong CostApp (index.html): giá vốn nhân (1 + % vận
@@ -448,10 +474,14 @@ function renderDishes(){
           <div class="instructions-text">${escapeHtml(d.instructions).replace(/\n/g,'<br>')}</div>
         </div>` : '';
     return `<div class="dish-card">
-      ${thumb}
       <div class="dish-body">
-        <div class="dish-cat">${escapeHtml(d.category||'Khác')}</div>
-        <div class="dish-name">${escapeHtml(d.name)}</div>
+        <div class="dish-header">
+          ${thumb}
+          <div class="dish-header-txt">
+            <div class="dish-cat">${escapeHtml(d.category||'Khác')}</div>
+            <div class="dish-name">${escapeHtml(d.name)}</div>
+          </div>
+        </div>
         ${d.description?`<p class="dish-desc">${escapeHtml(d.description)}</p>`:''}
         ${pdfLink}
         ${priceBox}
