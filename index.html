@@ -68,6 +68,15 @@
   .recipe-mode-row{display:flex;gap:22px;margin-bottom:22px;border-bottom:1px solid var(--line)}
   .mode-tab{background:none;border:none;padding:0 0 11px;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px}
   .mode-tab.active{color:var(--ink);border-bottom-color:var(--gold)}
+  .prod-mode-tab{background:none;border:none;padding:0 0 11px;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .prod-mode-tab.active{color:var(--ink);border-bottom-color:var(--gold)}
+  .product-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;display:flex;gap:14px;align-items:flex-start}
+  .product-body{flex:1;min-width:0}
+  .product-type-tag{font-size:10px;background:var(--gold-tint);color:var(--gold-deep);padding:2px 7px;border-radius:5px;font-weight:600;margin-right:6px}
+  .product-name{font-family:'Lora',serif;font-weight:600;font-size:16px;margin:5px 0 3px;color:var(--ink)}
+  .product-brand{font-size:12.5px;color:var(--ink-soft);margin-bottom:6px}
+  .product-note{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 10px}
+  .product-buy{display:inline-block;background:var(--ink);color:#fff;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:8px;text-decoration:none}
   .cat-chip{flex:none;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 15px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
   .cat-chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
   .empty{text-align:center;padding:60px 20px;color:var(--ink-soft);font-size:14px}
@@ -195,6 +204,7 @@
       <nav class="tabs" id="nav-tabs">
         <button data-page="recipes" class="active">🍹 Công thức</button>
         <button data-page="files">📂 Thư viện</button>
+        <button data-page="products">🧂 Nguyên liệu &amp; Dụng cụ</button>
         <button data-page="shopping">🛒 Mua sắm</button>
         <button data-page="news">📣 Thông báo<span class="badge-count" id="badge-thongbao"></span></button>
         <button data-page="contact">💬 Liên hệ</button>
@@ -237,6 +247,23 @@
       <div class="file-list" id="file-list"></div>
       <div class="empty" id="file-empty" style="display:none">
         <div class="ic">📂</div>Chưa có tài liệu nào được đăng.
+      </div>
+    </section>
+
+    <!-- NGUYÊN LIỆU & DỤNG CỤ -->
+    <section class="page" id="page-products">
+      <div class="page-head">
+        <h2>Nguyên liệu & dụng cụ</h2>
+        <p>Danh sách nguyên liệu, dụng cụ học viện dùng — bấm vào để xem chi tiết & mua ngay.</p>
+      </div>
+      <div class="recipe-mode-row">
+        <button class="prod-mode-tab active" data-ptype="all">Tất cả</button>
+        <button class="prod-mode-tab" data-ptype="ingredient">🧂 Nguyên liệu</button>
+        <button class="prod-mode-tab" data-ptype="tool">🔧 Dụng cụ</button>
+      </div>
+      <div class="dish-grid" id="product-grid"></div>
+      <div class="empty" id="product-empty" style="display:none">
+        <div class="ic">🧂</div>Chưa có nguyên liệu/dụng cụ nào được đăng.
       </div>
     </section>
 
@@ -307,6 +334,8 @@ let SETTINGS = {};
 let DISHES = [];
 let SEMIS = [];
 let RECIPE_MODE = 'dish'; // 'dish' = Món hoàn thiện, 'semi' = Công thức nền
+let PRODUCTS = [];
+let PRODUCT_TYPE = 'all'; // 'all' | 'ingredient' | 'tool'
 let ACTIVE_CAT = 'Tất cả';
 
 const $ = sel => document.querySelector(sel);
@@ -374,6 +403,8 @@ function applyPortalData(data){
   renderDishes();
   renderFiles(data.files||[]);
   renderShoppingLinks(data.shoppingLinks||[]);
+  PRODUCTS = data.products||[];
+  renderProducts();
 }
 /* ====================== TỰ ĐỘNG CẬP NHẬT (không cần bấm reload) ======================
  * Học viên thường không biết admin vừa đăng công thức/thông báo mới để chủ động
@@ -524,12 +555,12 @@ function escapeHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ====================== XEM ẢNH TO (bấm vào ảnh nhỏ góc thẻ công thức) ======================
- * Dùng "event delegation" — gắn 1 sự kiện duy nhất lên #dish-grid (thay vì
- * gắn riêng từng thẻ ảnh), vì các thẻ .dish-thumb-sm được tạo lại mỗi lần
- * renderDishes() chạy (kể cả lúc tự làm mới nền) — gắn lên phần tử cha 1 lần
- * là đủ, không cần gắn lại mỗi lần render. */
-$('#dish-grid').addEventListener('click', e=>{
+/* ====================== XEM ẢNH TO (bấm vào ảnh nhỏ góc thẻ công thức/sản phẩm) ======================
+ * Dùng "event delegation" trên <main> (bao trọn mọi trang) — thay vì gắn
+ * riêng từng lưới (#dish-grid, #product-grid...), vì các thẻ .dish-thumb-sm
+ * được tạo lại mỗi lần render chạy (kể cả lúc tự làm mới nền) — gắn 1 lần
+ * lên phần tử cha chung là đủ cho mọi lưới hiện tại lẫn thêm mới sau này. */
+$('main.wrap').addEventListener('click', e=>{
   const thumb = e.target.closest('.zoomable');
   if(!thumb) return;
   $('#lightbox-img').src = thumb.dataset.img;
@@ -556,6 +587,37 @@ function renderShoppingLinks(items){
       <div class="file-meta"><div class="t">${escapeHtml(s.title)}</div><div class="c">${escapeHtml(s.category||'')}${s.note?' · '+escapeHtml(s.note):''}</div></div>
       <a class="file-dl" href="${s.url}" target="_blank">Mở link</a>
     </div>`).join('');
+}
+
+/* ====================== NGUYÊN LIỆU & DỤNG CỤ ====================== */
+$$('.prod-mode-tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    PRODUCT_TYPE = btn.dataset.ptype;
+    $$('.prod-mode-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderProducts();
+  });
+});
+function renderProducts(){
+  const list = PRODUCT_TYPE==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.type===PRODUCT_TYPE);
+  $('#product-empty').style.display = list.length ? 'none':'block';
+  $('#product-grid').innerHTML = list.map(p=>{
+    const isPdf = p.fileType === 'pdf';
+    const thumb = isPdf
+      ? `<div class="dish-thumb-sm">📄</div>`
+      : (p.imageUrl ? `<div class="dish-thumb-sm zoomable" data-img="${p.imageUrl}" style="background-image:url('${p.imageUrl}')"></div>` : '');
+    return `<div class="product-card">
+      ${thumb}
+      <div class="product-body">
+        <span class="product-type-tag">${p.type==='tool'?'🔧 Dụng cụ':'🧂 Nguyên liệu'}</span>
+        ${p.category?`<span class="product-type-tag">${escapeHtml(p.category)}</span>`:''}
+        <div class="product-name">${escapeHtml(p.name)}</div>
+        ${p.brand?`<div class="product-brand">Hãng: ${escapeHtml(p.brand)}</div>`:''}
+        ${p.note?`<p class="product-note">${escapeHtml(p.note)}</p>`:''}
+        ${p.purchaseUrl?`<a class="product-buy" href="${p.purchaseUrl}" target="_blank">🛒 Mua ngay</a>`:''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ====================== THÔNG BÁO ====================== */
