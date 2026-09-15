@@ -78,6 +78,7 @@
         <button data-panel="dishes">🍹 Món hoàn thiện</button>
         <button data-panel="semis">🧪 Công thức nền</button>
         <button data-panel="files">📂 Thư viện file</button>
+        <button data-panel="products">🧂 Nguyên liệu &amp; Dụng cụ</button>
         <button data-panel="shopping">🛒 Mua sắm</button>
         <button data-panel="announcements">📣 Thông báo</button>
         <button data-panel="settings">⚙️ Cài đặt</button>
@@ -122,6 +123,15 @@
         <div class="card">
           <table><thead><tr><th>Tên tài liệu</th><th>Danh mục</th><th>Ghi chú</th><th></th></tr></thead>
           <tbody id="tb-files"></tbody></table>
+        </div>
+      </section>
+
+      <!-- NGUYÊN LIỆU & DỤNG CỤ -->
+      <section class="panel" id="panel-products">
+        <div class="panel-head"><h2>Nguyên liệu &amp; Dụng cụ</h2><button class="btn btn-honey" id="btn-add-product">+ Thêm sản phẩm</button></div>
+        <div class="card">
+          <table><thead><tr><th>Tên</th><th>Loại</th><th>Hãng</th><th>Danh mục</th><th></th></tr></thead>
+          <tbody id="tb-products"></tbody></table>
         </div>
       </section>
 
@@ -233,7 +243,7 @@ $('#in-adminkey').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preven
 function bootAdmin(){
   $('#login-screen').style.display='none';
   $('#app').style.display='block';
-  loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadShopping(); loadAnn(); loadSettings();
+  loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadProducts(); loadShopping(); loadAnn(); loadSettings();
 }
 if(ADMIN_KEY){ api('admin_login',{}).then(r=>{ if(r.ok) bootAdmin(); else $('#login-screen').style.display='flex'; }); }
 
@@ -308,7 +318,7 @@ async function toggleStudent(id, active){
 // Xoá riêng theo từng bảng (action tên khác nhau ở backend)
 async function delRow(tab, id, reload){
   if(!confirm('Xoá dòng này?')) return;
-  const actionMap = {students:'admin_delete_student', files:'admin_delete_file', shopping:'admin_delete_shopping_link', announcements:'admin_delete_announcement'};
+  const actionMap = {students:'admin_delete_student', files:'admin_delete_file', shopping:'admin_delete_shopping_link', products:'admin_delete_product', announcements:'admin_delete_announcement'};
   const r = await api(actionMap[tab], {id});
   if(r.ok) reload(); else alert(r.error);
 }
@@ -507,6 +517,78 @@ function editFile(f){
   });
 }
 
+/* ================= NGUYÊN LIỆU & DỤNG CỤ ================= */
+let currentProductFileType = 'image';
+async function loadProducts(){
+  const r = await api('admin_list_products', {});
+  if(!r.ok) return;
+  $('#tb-products').innerHTML = (r.items||[]).map(p=>`
+    <tr><td>${p.name}</td><td>${p.type==='tool'?'Dụng cụ':'Nguyên liệu'}</td><td>${p.brand||''}</td><td>${p.category||''}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick='editProduct(${jsonAttr(p)})'>Sửa</button>
+    <button class="btn btn-danger btn-sm" onclick="delRow('products','${p.id}',loadProducts)">Xoá</button></td></tr>`).join('')
+    || '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Chưa có nguyên liệu/dụng cụ nào.</td></tr>';
+}
+$('#btn-add-product').addEventListener('click', ()=>editProduct({}));
+function editProduct(p){
+  const isNew = !p.id;
+  currentProductFileType = p.file_type || 'image';
+  openModal(`<h3>${isNew?'Thêm':'Sửa'} nguyên liệu/dụng cụ</h3>
+    <div class="field"><label>Loại</label>
+      <select id="m-type" style="width:100%">
+        <option value="ingredient" ${p.type!=='tool'?'selected':''}>🧂 Nguyên liệu</option>
+        <option value="tool" ${p.type==='tool'?'selected':''}>🔧 Dụng cụ</option>
+      </select>
+    </div>
+    <div class="field"><label>Tên</label><input id="m-name" value="${p.name||''}"></div>
+    <div class="field"><label>Hãng (tuỳ chọn)</label><input id="m-brand" value="${p.brand||''}"></div>
+    <div class="field"><label>Danh mục (tuỳ chọn — VD: Trà, Bột, Máy pha chế, Ly/cốc...)</label><input id="m-cat" value="${p.category||''}"></div>
+    <div class="field">
+      <label>Ảnh (tuỳ chọn)</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="m-upload-prod" accept="image/*" style="flex:1;min-width:180px">
+        <span id="m-upload-prod-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+    <div class="field"><label>— hoặc dán link ảnh có sẵn</label><input id="m-img" value="${p.image_url||''}"></div>
+    <div class="field"><label>Link mua (Shopee/nơi bán, tuỳ chọn)</label><input id="m-purl" value="${p.purchase_url||''}"></div>
+    <div class="field"><label>Ghi chú (tuỳ chọn — đóng gói/thông số...)</label><textarea id="m-note" rows="3">${p.note||''}</textarea></div>
+    <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-order" value="${p.display_order||''}"></div>
+    <button class="btn btn-honey" id="m-save-product">Lưu</button>`);
+
+  $('#m-upload-prod').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const status = $('#m-upload-prod-status');
+    status.textContent = 'Đang tải lên...';
+    try{
+      const base64 = await fileToBase64(file);
+      const r = await api('admin_upload_dish_media', { fileName:file.name, mimeType:file.type, base64 });
+      if(!r.ok){ status.textContent = ''; alert('Tải lên thất bại: ' + r.error); return; }
+      $('#m-img').value = r.url;
+      currentProductFileType = r.fileType;
+      status.textContent = '✅ Đã tải lên — nhớ bấm Lưu';
+    }catch(err){
+      status.textContent = '';
+      alert('Tải lên thất bại — thử lại hoặc dùng ảnh nhỏ hơn.');
+    }
+  });
+
+  $('#m-save-product').addEventListener('click', async ()=>{
+    const btn = $('#m-save-product');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+    const data = {
+      type:$('#m-type').value, name:$('#m-name').value.trim(), brand:$('#m-brand').value.trim(),
+      category:$('#m-cat').value.trim(), image_url:$('#m-img').value.trim(), file_type: currentProductFileType,
+      purchase_url:$('#m-purl').value.trim(), note:$('#m-note').value.trim(), display_order:$('#m-order').value.trim(),
+    };
+    const r = isNew ? await api('admin_add_product',{data}) : await api('admin_update_product',{id:p.id, data});
+    if(r.ok){ closeModal(); loadProducts(); toast('Đã lưu'); }
+    else { btn.disabled=false; btn.textContent=oldText; alert('Lưu thất bại: ' + r.error); }
+  });
+}
+
 /* ================= MUA SẮM ================= */
 async function loadShopping(){
   const r = await api('admin_list_shopping_links', {});
@@ -631,7 +713,7 @@ $('#btn-import-backup').addEventListener('click', async ()=>{
     const r = await api('admin_import_backup', {backup});
     if(r.ok){
       toast('Đã khôi phục ' + r.restored + ' dòng dữ liệu');
-      loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadShopping(); loadAnn(); loadSettings();
+      loadStudents(); loadDishes(); loadSemis(); loadFiles(); loadProducts(); loadShopping(); loadAnn(); loadSettings();
     } else alert('Khôi phục thất bại: ' + r.error);
   }catch(err){
     alert('File backup không hợp lệ (không đọc được dạng JSON).');
