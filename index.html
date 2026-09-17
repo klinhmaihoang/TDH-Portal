@@ -604,7 +604,9 @@ function escapeHtml(s){
 function highlightInstructions(text){
   let html = escapeHtml(text);
   html = html.replace(/(Bước\s*\d+\s*:)/gi, '<strong class="step-label">$1</strong>');
-  html = html.replace(/(\d+[.,]?\d*\s*(?:ml|lít|kg|gr|g|muỗng|cái|quả|lá|gói|chén|ly|phút|giây|p|độ\s*c)\b)/gi, '<span class="qty-highlight">$1</span>');
+  // Bắt luôn cả KHOẢNG số (VD "15-20 cái", "15 - 20 phút") thành 1 cụm tô nổi
+  // bật duy nhất, không chỉ tô mỗi số cuối cùng trước đơn vị.
+  html = html.replace(/((?:\d+[.,]?\d*\s*-\s*)?\d+[.,]?\d*\s*(?:ml|lít|kg|gr|g|muỗng|cái|quả|lá|gói|chén|ly|phút|giây|p|độ\s*c)\b)/gi, '<span class="qty-highlight">$1</span>');
   return html.replace(/\n/g, '<br>');
 }
 
