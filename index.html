@@ -500,13 +500,31 @@ $$('.mode-tab').forEach(btn=>{
   });
 });
 function currentList(){ return RECIPE_MODE==='dish' ? DISHES : SEMIS; }
+// Thứ tự danh mục CỐ ĐỊNH (không theo alphabet) — danh mục nào không nằm
+// trong danh sách này (VD gõ nhầm chính tả, hoặc danh mục mới chưa khai báo
+// ở đây) sẽ tự động rơi xuống CUỐI (trước "Tất cả"), không bị mất.
+const CATEGORY_ORDER = {
+  dish: ['Hồng trà', 'Lục trà', 'Trà sữa', 'Trà olong', 'Trà thái', 'Cà phê', 'Đá xay'],
+  semi: ['Nước đường', 'Cốt trà nền', 'Cốt cà phê', 'Topping'],
+};
+function sortCategoriesByOrder(cats, mode){
+  const order = CATEGORY_ORDER[mode] || [];
+  return [...cats].sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if(ia===-1 && ib===-1) return a.localeCompare(b, 'vi');
+    if(ia===-1) return 1;
+    if(ib===-1) return -1;
+    return ia - ib;
+  });
+}
 function renderCategories(){
   // "Tất cả" đặt Ở CUỐI (không mặc định mở đầu) — vì khi xem "Tất cả", các
   // món từ nhiều danh mục khác nhau bị trộn chung, thứ tự hiển thị (display
   // order) chỉ có ý nghĩa SO SÁNH trong cùng 1 danh mục nên nhìn tùm lum nếu
   // là màn hình đầu tiên học viên thấy. Mặc định mở đúng 1 danh mục cụ thể
   // (danh mục đầu tiên) thay vì "Tất cả".
-  const realCats = [...new Set(currentList().map(d=>d.category||'Khác'))];
+  const rawCats = [...new Set(currentList().map(d=>d.category||'Khác'))];
+  const realCats = sortCategoriesByOrder(rawCats, RECIPE_MODE);
   const cats = [...realCats, 'Tất cả'];
   if(!ACTIVE_CAT || !cats.includes(ACTIVE_CAT)) ACTIVE_CAT = realCats[0] || 'Tất cả';
   $('#cat-row').innerHTML = cats.map(c=>`<button class="cat-chip ${c===ACTIVE_CAT?'active':''}" data-cat="${c}">${c}</button>`).join('');
