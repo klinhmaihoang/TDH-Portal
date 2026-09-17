@@ -282,11 +282,30 @@ function renderStudentTable(list){
       <td>${s.note||''}</td>
       <td><span class="badge ${String(s.active).toUpperCase()==='TRUE'?'badge-on':'badge-off'}">${String(s.active).toUpperCase()==='TRUE'?'Hoạt động':'Đã khoá'}</span></td>
       <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick='editStudent(${jsonAttr(s)})'>Sửa</button>
         <button class="btn btn-ghost btn-sm" onclick="regenCode('${s.id}')">Cấp mã mới</button>
         <button class="btn btn-ghost btn-sm" onclick="toggleStudent('${s.id}','${s.active}')">${String(s.active).toUpperCase()==='TRUE'?'Khoá':'Mở khoá'}</button>
         <button class="btn btn-danger btn-sm" onclick="delRow('students','${s.id}',loadStudents)">Xoá</button>
       </td>
     </tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Chưa có học viên nào.</td></tr>';
+}
+function editStudent(s){
+  openModal(`<h3>Sửa học viên</h3>
+    <div class="field"><label>Tên học viên</label><input id="m-ename" value="${s.name||''}"></div>
+    <div class="field"><label>Số điện thoại</label><input id="m-ephone" value="${s.phone||''}"></div>
+    <div class="field"><label>Ghi chú</label><input id="m-enote" value="${s.note||''}"></div>
+    <button class="btn btn-honey" id="m-esave">Lưu</button>`);
+  $('#m-esave').addEventListener('click', async ()=>{
+    const btn = $('#m-esave');
+    if(btn.disabled) return;
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+    const r = await api('admin_update_student', {id:s.id, data:{
+      name: $('#m-ename').value.trim(), phone: $('#m-ephone').value.trim(), note: $('#m-enote').value.trim(),
+    }});
+    if(r.ok){ closeModal(); loadStudents(); toast('Đã lưu'); }
+    else { btn.disabled=false; btn.textContent=oldText; alert('Lưu thất bại: ' + r.error); }
+  });
 }
 $('#search-students').addEventListener('input', e=>{
   const q = stripDiacritics(e.target.value.trim());
