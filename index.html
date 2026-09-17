@@ -65,6 +65,8 @@
 
   /* ---------- Công thức ---------- */
   .cat-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:20px}
+  .search-box{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;margin-bottom:16px}
+  .search-box:focus{outline:none;border-color:var(--gold)}
   .recipe-mode-row{display:flex;gap:22px;margin-bottom:22px;border-bottom:1px solid var(--line)}
   .mode-tab{background:none;border:none;padding:0 0 11px;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px}
   .mode-tab.active{color:var(--ink);border-bottom-color:var(--gold)}
@@ -226,6 +228,7 @@
         <button class="mode-tab active" data-mode="dish">🍹 Món hoàn thiện</button>
         <button class="mode-tab" data-mode="semi">🧪 Công thức nền</button>
       </div>
+      <input type="text" class="search-box" id="search-recipes" placeholder="🔎 Tìm công thức theo tên...">
       <div class="cat-row" id="cat-row"></div>
       <div class="dish-grid" id="dish-grid"></div>
       <div class="empty" id="dish-empty" style="display:none">
@@ -244,6 +247,7 @@
         <h2>Thư viện chung</h2>
         <p>Tài liệu, danh sách nguyên liệu & công cụ dụng cụ học viện tặng bạn.</p>
       </div>
+      <input type="text" class="search-box" id="search-files" placeholder="🔎 Tìm tài liệu theo tên...">
       <div class="file-list" id="file-list"></div>
       <div class="empty" id="file-empty" style="display:none">
         <div class="ic">📂</div>Chưa có tài liệu nào được đăng.
@@ -261,6 +265,7 @@
         <button class="prod-mode-tab" data-ptype="ingredient">🧂 Nguyên liệu</button>
         <button class="prod-mode-tab" data-ptype="tool">🔧 Dụng cụ</button>
       </div>
+      <input type="text" class="search-box" id="search-products" placeholder="🔎 Tìm nguyên liệu/dụng cụ theo tên...">
       <div class="dish-grid" id="product-grid"></div>
       <div class="empty" id="product-empty" style="display:none">
         <div class="ic">🧂</div>Chưa có nguyên liệu/dụng cụ nào được đăng.
@@ -273,6 +278,7 @@
         <h2>Mua sắm dụng cụ & nguyên liệu</h2>
         <p>Link đặt mua nhanh — bấm vào để mở thẳng trang bán hàng.</p>
       </div>
+      <input type="text" class="search-box" id="search-shopping" placeholder="🔎 Tìm theo tên...">
       <div class="file-list" id="shopping-list"></div>
       <div class="empty" id="shopping-empty" style="display:none">
         <div class="ic">🛒</div>Chưa có link mua sắm nào được đăng.
@@ -337,6 +343,18 @@ let RECIPE_MODE = 'dish'; // 'dish' = Món hoàn thiện, 'semi' = Công thức 
 let PRODUCTS = [];
 let PRODUCT_TYPE = 'all'; // 'all' | 'ingredient' | 'tool'
 let ACTIVE_CAT = 'Tất cả';
+let FILES = [];
+let SHOPPING_LINKS = [];
+let SEARCH_RECIPE = '';
+let SEARCH_PRODUCT = '';
+let SEARCH_FILE = '';
+let SEARCH_SHOPPING = '';
+function stripDiacritics(str){
+  return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();
+}
+function matchesSearch(name, query){
+  return !query || stripDiacritics(name).includes(stripDiacritics(query));
+}
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => document.querySelectorAll(sel);
@@ -490,7 +508,8 @@ function renderCategories(){
 function money(n){ n=Math.round(Number(n)||0); return n.toLocaleString('vi-VN')+'đ'; }
 function renderDishes(){
   const all = currentList();
-  const list = ACTIVE_CAT==='Tất cả' ? all : all.filter(d=>(d.category||'Khác')===ACTIVE_CAT);
+  let list = ACTIVE_CAT==='Tất cả' ? all : all.filter(d=>(d.category||'Khác')===ACTIVE_CAT);
+  if(SEARCH_RECIPE) list = list.filter(d=>matchesSearch(d.name, SEARCH_RECIPE));
   $('#dish-empty').style.display = list.length ? 'none':'block';
   $('#dish-grid').innerHTML = list.map(d=>{
     const isPdf = d.fileType === 'pdf';
@@ -571,8 +590,10 @@ $('#lightbox-bg').addEventListener('click', e=>{ if(e.target.id==='lightbox-bg')
 
 /* ====================== THƯ VIỆN ====================== */
 function renderFiles(files){
-  $('#file-empty').style.display = files.length? 'none':'block';
-  $('#file-list').innerHTML = files.map(f=>`
+  if(files) FILES = files; // giữ lại danh sách gốc để lọc lại khi gõ tìm kiếm
+  const list = SEARCH_FILE ? FILES.filter(f=>matchesSearch(f.title, SEARCH_FILE)) : FILES;
+  $('#file-empty').style.display = list.length? 'none':'block';
+  $('#file-list').innerHTML = list.map(f=>`
     <div class="file-row">
       <div class="file-ic">📄</div>
       <div class="file-meta"><div class="t">${escapeHtml(f.title)}</div><div class="c">${escapeHtml(f.category||'')}${f.note?' · '+escapeHtml(f.note):''}</div></div>
@@ -580,8 +601,10 @@ function renderFiles(files){
     </div>`).join('');
 }
 function renderShoppingLinks(items){
-  $('#shopping-empty').style.display = items.length? 'none':'block';
-  $('#shopping-list').innerHTML = items.map(s=>`
+  if(items) SHOPPING_LINKS = items;
+  const list = SEARCH_SHOPPING ? SHOPPING_LINKS.filter(s=>matchesSearch(s.title, SEARCH_SHOPPING)) : SHOPPING_LINKS;
+  $('#shopping-empty').style.display = list.length? 'none':'block';
+  $('#shopping-list').innerHTML = list.map(s=>`
     <div class="file-row">
       <div class="file-ic">🛒</div>
       <div class="file-meta"><div class="t">${escapeHtml(s.title)}</div><div class="c">${escapeHtml(s.category||'')}${s.note?' · '+escapeHtml(s.note):''}</div></div>
@@ -599,7 +622,8 @@ $$('.prod-mode-tab').forEach(btn=>{
   });
 });
 function renderProducts(){
-  const list = PRODUCT_TYPE==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.type===PRODUCT_TYPE);
+  let list = PRODUCT_TYPE==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.type===PRODUCT_TYPE);
+  if(SEARCH_PRODUCT) list = list.filter(p=>matchesSearch(p.name, SEARCH_PRODUCT));
   $('#product-empty').style.display = list.length ? 'none':'block';
   $('#product-grid').innerHTML = list.map(p=>{
     const isPdf = p.fileType === 'pdf';
@@ -665,6 +689,12 @@ $$('nav.tabs button').forEach(btn=>{
   });
 });
 $('#btn-hamburger').addEventListener('click', ()=> $('#nav-tabs').classList.toggle('open'));
+
+/* ====================== Ô TÌM KIẾM (5 tab) ====================== */
+$('#search-recipes').addEventListener('input', e=>{ SEARCH_RECIPE = e.target.value.trim(); renderDishes(); });
+$('#search-products').addEventListener('input', e=>{ SEARCH_PRODUCT = e.target.value.trim(); renderProducts(); });
+$('#search-files').addEventListener('input', e=>{ SEARCH_FILE = e.target.value.trim(); renderFiles(); });
+$('#search-shopping').addEventListener('input', e=>{ SEARCH_SHOPPING = e.target.value.trim(); renderShoppingLinks(); });
 
 /* ====================== KHỞI ĐỘNG ====================== */
 if(TOKEN){ boot(); } else { $('#login-screen').style.display='flex'; }
