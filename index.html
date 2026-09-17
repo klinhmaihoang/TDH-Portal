@@ -108,7 +108,9 @@
   .price-note{font-size:11.5px;color:var(--ink-soft);margin:-8px 0 14px;line-height:1.5}
   .instructions-box{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:15px 17px;margin-top:16px}
   .instructions-title{font-family:'Lora',serif;font-weight:600;font-size:14px;color:var(--ink);margin-bottom:8px}
-  .instructions-text{font-size:13.5px;color:var(--ink-soft);line-height:1.7}
+  .instructions-text{font-size:14px;font-weight:500;color:var(--ink);line-height:1.85}
+  .instructions-text .step-label{color:var(--gold-deep);font-weight:700}
+  .instructions-text .qty-highlight{background:var(--gold-tint);color:var(--gold-deep);font-weight:700;padding:1px 5px;border-radius:5px;white-space:nowrap}
   table.comp-table{width:100%;border-collapse:collapse;font-size:13px}
   table.comp-table th{text-align:left;color:var(--ink-soft);font-weight:600;font-size:11.5px;padding:6px 4px;border-bottom:1px solid var(--line)}
   table.comp-table td{padding:8px 4px;border-bottom:1px solid var(--line);color:var(--ink)}
@@ -569,7 +571,7 @@ function renderDishes(){
     const instructionsBlock = d.instructions ? `
         <div class="instructions-box">
           <div class="instructions-title">👩‍🍳 Cách làm</div>
-          <div class="instructions-text">${escapeHtml(d.instructions).replace(/\n/g,'<br>')}</div>
+          <div class="instructions-text">${highlightInstructions(d.instructions)}</div>
         </div>` : '';
     return `<div class="dish-card">
       <div class="dish-body">
@@ -594,6 +596,16 @@ function renderDishes(){
 }
 function escapeHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Làm rõ đoạn "Cách làm": in đậm nhãn "Bước N:" đầu mỗi dòng, và tô nổi bật
+// các con số định lượng (ml, g, kg, phút...) để học viên liếc nhanh vẫn bắt
+// được đúng số lượng, không phải đọc chậm từng chữ mới ra. Escape HTML TRƯỚC
+// khi thêm thẻ tô nổi bật, để nội dung admin gõ không lỡ chèn HTML lạ.
+function highlightInstructions(text){
+  let html = escapeHtml(text);
+  html = html.replace(/(Bước\s*\d+\s*:)/gi, '<strong class="step-label">$1</strong>');
+  html = html.replace(/(\d+[.,]?\d*\s*(?:ml|lít|kg|gr|g|muỗng|cái|quả|lá|gói|chén|ly|phút|giây|p|độ\s*c)\b)/gi, '<span class="qty-highlight">$1</span>');
+  return html.replace(/\n/g, '<br>');
 }
 
 /* ====================== XEM ẢNH TO (bấm vào ảnh nhỏ góc thẻ công thức/sản phẩm) ======================
