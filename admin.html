@@ -120,6 +120,7 @@
       <!-- THƯ VIỆN -->
       <section class="panel" id="panel-files">
         <div class="panel-head"><h2>Thư viện file</h2><button class="btn btn-honey" id="btn-add-file">+ Thêm file</button></div>
+        <input type="text" id="search-files" placeholder="🔎 Tìm tài liệu theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
           <table><thead><tr><th>Tên tài liệu</th><th>Danh mục</th><th>Ghi chú</th><th></th></tr></thead>
           <tbody id="tb-files"></tbody></table>
@@ -129,6 +130,7 @@
       <!-- NGUYÊN LIỆU & DỤNG CỤ -->
       <section class="panel" id="panel-products">
         <div class="panel-head"><h2>Nguyên liệu &amp; Dụng cụ</h2><button class="btn btn-honey" id="btn-add-product">+ Thêm sản phẩm</button></div>
+        <input type="text" id="search-products" placeholder="🔎 Tìm theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
           <table><thead><tr><th>Tên</th><th>Loại</th><th>Hãng</th><th>Danh mục</th><th></th></tr></thead>
           <tbody id="tb-products"></tbody></table>
@@ -139,6 +141,7 @@
       <section class="panel" id="panel-shopping">
         <div class="panel-head"><h2>Link mua sắm dụng cụ & nguyên liệu</h2><button class="btn btn-honey" id="btn-add-shopping">+ Thêm link</button></div>
         <p style="color:var(--muted);font-size:13px;margin-top:-8px">Link đặt mua nhanh (website công ty, Shopee...) — học viên bấm là mở thẳng trang bán hàng.</p>
+        <input type="text" id="search-shopping" placeholder="🔎 Tìm theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
           <table><thead><tr><th>Tên</th><th>Danh mục</th><th>Ghi chú</th><th></th></tr></thead>
           <tbody id="tb-shopping"></tbody></table>
@@ -488,15 +491,24 @@ function editSemi(s){
 }
 
 /* ================= THƯ VIỆN FILE ================= */
+let ALL_FILES = [];
 async function loadFiles(){
   const r = await api('admin_list_files', {});
   if(!r.ok) return;
-  $('#tb-files').innerHTML = (r.items||[]).map(f=>`
+  ALL_FILES = r.items || [];
+  renderFileTable(ALL_FILES);
+}
+function renderFileTable(list){
+  $('#tb-files').innerHTML = list.map(f=>`
     <tr><td>${f.title}</td><td>${f.category||''}</td><td>${f.note||''}</td>
     <td><button class="btn btn-ghost btn-sm" onclick='editFile(${jsonAttr(f)})'>Sửa</button>
     <button class="btn btn-danger btn-sm" onclick="delRow('files','${f.id}',loadFiles)">Xoá</button></td></tr>`).join('')
     || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có tài liệu nào.</td></tr>';
 }
+$('#search-files').addEventListener('input', e=>{
+  const q = stripDiacritics(e.target.value.trim());
+  renderFileTable(q ? ALL_FILES.filter(f=>stripDiacritics(f.title).includes(q)) : ALL_FILES);
+});
 $('#btn-add-file').addEventListener('click', ()=>editFile({}));
 function editFile(f){
   const isNew = !f.id;
@@ -520,15 +532,24 @@ function editFile(f){
 
 /* ================= NGUYÊN LIỆU & DỤNG CỤ ================= */
 let currentProductFileType = 'image';
+let ALL_PRODUCTS = [];
 async function loadProducts(){
   const r = await api('admin_list_products', {});
   if(!r.ok) return;
-  $('#tb-products').innerHTML = (r.items||[]).map(p=>`
+  ALL_PRODUCTS = r.items || [];
+  renderProductTable(ALL_PRODUCTS);
+}
+function renderProductTable(list){
+  $('#tb-products').innerHTML = list.map(p=>`
     <tr><td>${p.name}</td><td>${p.type==='tool'?'Dụng cụ':'Nguyên liệu'}</td><td>${p.brand||''}</td><td>${p.category||''}</td>
     <td><button class="btn btn-ghost btn-sm" onclick='editProduct(${jsonAttr(p)})'>Sửa</button>
     <button class="btn btn-danger btn-sm" onclick="delRow('products','${p.id}',loadProducts)">Xoá</button></td></tr>`).join('')
     || '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Chưa có nguyên liệu/dụng cụ nào.</td></tr>';
 }
+$('#search-products').addEventListener('input', e=>{
+  const q = stripDiacritics(e.target.value.trim());
+  renderProductTable(q ? ALL_PRODUCTS.filter(p=>stripDiacritics(p.name).includes(q)) : ALL_PRODUCTS);
+});
 $('#btn-add-product').addEventListener('click', ()=>editProduct({}));
 function editProduct(p){
   const isNew = !p.id;
@@ -591,15 +612,24 @@ function editProduct(p){
 }
 
 /* ================= MUA SẮM ================= */
+let ALL_SHOPPING = [];
 async function loadShopping(){
   const r = await api('admin_list_shopping_links', {});
   if(!r.ok) return;
-  $('#tb-shopping').innerHTML = (r.items||[]).map(s=>`
+  ALL_SHOPPING = r.items || [];
+  renderShoppingTable(ALL_SHOPPING);
+}
+function renderShoppingTable(list){
+  $('#tb-shopping').innerHTML = list.map(s=>`
     <tr><td>${s.title}</td><td>${s.category||''}</td><td>${s.note||''}</td>
     <td><button class="btn btn-ghost btn-sm" onclick='editShopping(${jsonAttr(s)})'>Sửa</button>
     <button class="btn btn-danger btn-sm" onclick="delRow('shopping','${s.id}',loadShopping)">Xoá</button></td></tr>`).join('')
     || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có link mua sắm nào.</td></tr>';
 }
+$('#search-shopping').addEventListener('input', e=>{
+  const q = stripDiacritics(e.target.value.trim());
+  renderShoppingTable(q ? ALL_SHOPPING.filter(s=>stripDiacritics(s.title).includes(q)) : ALL_SHOPPING);
+});
 $('#btn-add-shopping').addEventListener('click', ()=>editShopping({}));
 function editShopping(s){
   const isNew = !s.id;
