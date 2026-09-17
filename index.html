@@ -342,7 +342,7 @@ let SEMIS = [];
 let RECIPE_MODE = 'dish'; // 'dish' = Món hoàn thiện, 'semi' = Công thức nền
 let PRODUCTS = [];
 let PRODUCT_TYPE = 'all'; // 'all' | 'ingredient' | 'tool'
-let ACTIVE_CAT = 'Tất cả';
+let ACTIVE_CAT = null; // để trống ban đầu — renderCategories() sẽ tự chọn đúng danh mục đầu tiên
 let FILES = [];
 let SHOPPING_LINKS = [];
 let SEARCH_RECIPE = '';
@@ -492,7 +492,7 @@ function applySettingsToUI(){
 $$('.mode-tab').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     RECIPE_MODE = btn.dataset.mode;
-    ACTIVE_CAT = 'Tất cả';
+    ACTIVE_CAT = null; // đổi chế độ → để renderCategories() tự chọn lại đúng danh mục đầu tiên của chế độ mới
     $$('.mode-tab').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     renderCategories();
@@ -501,7 +501,14 @@ $$('.mode-tab').forEach(btn=>{
 });
 function currentList(){ return RECIPE_MODE==='dish' ? DISHES : SEMIS; }
 function renderCategories(){
-  const cats = ['Tất cả', ...new Set(currentList().map(d=>d.category||'Khác'))];
+  // "Tất cả" đặt Ở CUỐI (không mặc định mở đầu) — vì khi xem "Tất cả", các
+  // món từ nhiều danh mục khác nhau bị trộn chung, thứ tự hiển thị (display
+  // order) chỉ có ý nghĩa SO SÁNH trong cùng 1 danh mục nên nhìn tùm lum nếu
+  // là màn hình đầu tiên học viên thấy. Mặc định mở đúng 1 danh mục cụ thể
+  // (danh mục đầu tiên) thay vì "Tất cả".
+  const realCats = [...new Set(currentList().map(d=>d.category||'Khác'))];
+  const cats = [...realCats, 'Tất cả'];
+  if(!ACTIVE_CAT || !cats.includes(ACTIVE_CAT)) ACTIVE_CAT = realCats[0] || 'Tất cả';
   $('#cat-row').innerHTML = cats.map(c=>`<button class="cat-chip ${c===ACTIVE_CAT?'active':''}" data-cat="${c}">${c}</button>`).join('');
   $$('.cat-chip').forEach(b=>b.addEventListener('click', ()=>{ ACTIVE_CAT=b.dataset.cat; renderCategories(); renderDishes(); }));
 }
