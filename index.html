@@ -545,15 +545,12 @@ function renderDishes(){
       ? `<div class="dish-thumb-sm">📄</div>`
       : (d.imageUrl ? `<div class="dish-thumb-sm zoomable" data-img="${d.imageUrl}" style="background-image:url('${d.imageUrl}')"></div>` : '');
     const pdfLink = (isPdf && d.imageUrl) ? `<a class="pdf-link" href="${d.imageUrl}" target="_blank">📄 Xem file PDF công thức</a>` : '';
-    // Ghi chú công thức tính giá bán — ĐÚNG NGUYÊN VĂN công thức thật lấy từ
-    // suggestedPrice() trong CostApp (index.html): giá vốn nhân (1 + % vận
-    // hành), rồi chia % food cost mục tiêu, làm tròn đến hàng nghìn. Tính lại
-    // luôn số liệu thật của từng món để học viên đối chiếu ra đúng số hiện có.
-    const opPctDisplay = Math.round((Number(d.opPct)||0) * 100);
+    // Ghi chú dưới giá bán: KHÔNG còn hiện chi tiết công thức tính nữa — đổi
+    // sang nhấn mạnh đây chỉ là con số THAM KHẢO, tránh học viên hiểu lầm
+    // phải áp dụng nguyên giá này khi bán thật.
     const fcPctDisplay = Math.round((Number(d.fcPct)||0) * 100);
-    const costAfterOp = Math.round((Number(d.cost)||0) * (1 + (Number(d.opPct)||0)));
     const priceNote = (RECIPE_MODE==='dish' && fcPctDisplay)
-      ? `<p class="price-note">Cách tính: Giá vốn ${money(d.cost)} × (1 + ${opPctDisplay}% chi phí vận hành) = ${money(costAfterOp)}, rồi chia cho ${fcPctDisplay}% food cost mục tiêu, làm tròn đến nghìn đồng → ${money(d.suggestedPrice)}.</p>` : '';
+      ? `<p class="price-note">💡 Đây là giá bán đề xuất tính theo giá vốn — chỉ mang tính tham khảo để cân nhắc khi quyết định giá bán thực tế, không phải mức giá bắt buộc phải áp dụng.</p>` : '';
     const priceBox = RECIPE_MODE==='dish'
       ? `<div class="price-box">
            <div><div class="l1">Giá vốn</div><div class="l2">${money(d.cost)}</div></div>
