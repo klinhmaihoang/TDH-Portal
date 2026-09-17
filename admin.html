@@ -89,6 +89,7 @@
       <!-- HỌC VIÊN -->
       <section class="panel active" id="panel-students">
         <div class="panel-head"><h2>Học viên được cấp quyền</h2><button class="btn btn-honey" id="btn-add-student">+ Thêm học viên</button></div>
+        <input type="text" id="search-students" placeholder="🔎 Tìm học viên theo tên hoặc SĐT..." style="width:100%;margin-bottom:12px">
         <div class="card">
           <table><thead><tr><th>Tên</th><th>SĐT</th><th>Mã truy cập</th><th>Loại lớp</th><th>Ghi chú</th><th>Trạng thái</th><th></th></tr></thead>
           <tbody id="tb-students"></tbody></table>
@@ -165,6 +166,8 @@
             <div class="field"><label>Sheet ID công thức gốc (tài khoản CostApp chính)</label><input id="s-master_sheet_id"></div>
             <div class="field" style="grid-column:1/-1"><label>Danh mục dành cho Lớp cốt lõi (cách nhau bằng dấu phẩy — phải khớp đúng chữ ở ô "Danh mục" khi sửa công thức)</label><input id="s-core_class_categories" placeholder="VD: Trà sữa, Trà trái cây, Trà nền, Trà sữa nền"></div>
             <div class="field" style="grid-column:1/-1"><label>Danh mục Nguyên liệu/Dụng cụ dành cho Lớp cốt lõi (để trống = Lớp cốt lõi không xem được mục Nguyên liệu/Dụng cụ nào cả)</label><input id="s-core_class_product_categories" placeholder="VD: Trà, Bột, Ly/cốc"></div>
+            <div class="field" style="grid-column:1/-1"><label>Thứ tự hiện danh mục — Món hoàn thiện (cách nhau bằng dấu phẩy, đúng thứ tự muốn hiện)</label><input id="s-dish_category_order" placeholder="VD: Hồng trà,Lục trà,Trà sữa,Trà olong,Trà thái,Cà phê,Đá xay"></div>
+            <div class="field" style="grid-column:1/-1"><label>Thứ tự hiện danh mục — Công thức nền</label><input id="s-semi_category_order" placeholder="VD: Nước đường,Cốt trà nền,Cốt cà phê,Topping"></div>
             <div class="field"><label>Link app CostApp</label><input id="s-costapp_url"></div>
             <div class="field"><label>Tên học viện</label><input id="s-academy_name"></div>
             <div class="field"><label>SĐT Zalo học viện</label><input id="s-zalo_phone"></div>
@@ -258,10 +261,15 @@ $$('aside nav button').forEach(b=>b.addEventListener('click', ()=>{
 }));
 
 /* ================= HỌC VIÊN ================= */
+let ALL_STUDENTS = [];
 async function loadStudents(){
   const r = await api('admin_list_students', {});
   if(!r.ok) return;
-  $('#tb-students').innerHTML = (r.items||[]).map(s=>`
+  ALL_STUDENTS = r.items || [];
+  renderStudentTable(ALL_STUDENTS);
+}
+function renderStudentTable(list){
+  $('#tb-students').innerHTML = list.map(s=>`
     <tr>
       <td>${s.name}</td><td>${s.phone}</td>
       <td><span class="code-pill">${s.access_code}</span></td>
@@ -280,6 +288,10 @@ async function loadStudents(){
       </td>
     </tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Chưa có học viên nào.</td></tr>';
 }
+$('#search-students').addEventListener('input', e=>{
+  const q = stripDiacritics(e.target.value.trim());
+  renderStudentTable(q ? ALL_STUDENTS.filter(s=>stripDiacritics(s.name).includes(q) || String(s.phone||'').includes(e.target.value.trim())) : ALL_STUDENTS);
+});
 $('#btn-add-student').addEventListener('click', ()=>{
   openModal(`<h3>Thêm học viên</h3>
     <div class="field"><label>Tên học viên</label><input id="m-name"></div>
