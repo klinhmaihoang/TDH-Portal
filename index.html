@@ -236,7 +236,7 @@
       <div class="empty" id="dish-empty" style="display:none">
         <div class="ic">🍹</div>Chưa có công thức nào được công bố.
       </div>
-      <a class="costapp-banner" id="costapp-link" target="_blank">
+      <a class="costapp-banner" id="costapp-link" href="#">
         <div class="ic">🧮</div>
         <div class="txt"><strong>Tự tính cost món khác</strong><span>Mở CostApp để thực hành tính giá vốn</span></div>
         <div class="go">→</div>
@@ -467,11 +467,12 @@ function applySettingsToUI(){
   const facebookUrl = String(SETTINGS.facebook_url || '');
   const email = String(SETTINGS.email || '');
   const groupUrl = String(SETTINGS.group_url || '');
-  const costappUrl = String(SETTINGS.costapp_url || '');
   const zaloLink = zalo ? ('https://zalo.me/'+zalo.replace(/\D/g,'')) : '#';
   $('#help-zalo-link').href = zaloLink;
   $('#group-link').href = groupUrl || '#';
-  $('#costapp-link').href = costappUrl || '#';
+  // "#costapp-link" KHÔNG gán href cố định ở đây nữa — mã đăng nhập 1 chạm
+  // (SSO) chỉ sống 60 giây nên phải lấy link MỚI đúng lúc bấm, xem sự kiện
+  // click gắn riêng cho nút này ở cuối file.
 
   const items = [
     {ic:'💬', label:'Zalo học viện', sub: zalo, href: zaloLink},
@@ -725,6 +726,16 @@ $$('nav.tabs button').forEach(btn=>{
   });
 });
 $('#btn-hamburger').addEventListener('click', ()=> $('#nav-tabs').classList.toggle('open'));
+
+/* ====================== MỞ COSTAPP (tự đăng nhập 1 chạm nếu đã gán mã học viên CostApp) ======================
+ * Mã thông hành chỉ sống 60 giây nên phải lấy MỚI đúng lúc bấm — không thể
+ * gán sẵn href cố định từ trước như các link khác. */
+$('#costapp-link').addEventListener('click', async (e)=>{
+  e.preventDefault();
+  const r = await api('get_costapp_sso_link', {token: TOKEN});
+  if(r.ok && r.url) window.open(r.url, '_blank');
+  else alert('Không mở được CostApp lúc này, thử lại sau.');
+});
 
 /* ====================== Ô TÌM KIẾM (5 tab) ====================== */
 $('#search-recipes').addEventListener('input', e=>{ SEARCH_RECIPE = e.target.value.trim(); renderDishes(); });
