@@ -293,6 +293,8 @@ function editStudent(s){
   openModal(`<h3>Sửa học viên</h3>
     <div class="field"><label>Tên học viên</label><input id="m-ename" value="${s.name||''}"></div>
     <div class="field"><label>Số điện thoại</label><input id="m-ephone" value="${s.phone||''}"></div>
+    <div class="field"><label>Mã học viên CostApp (tuỳ chọn — để trống nếu học viên đăng nhập CostApp bằng Google)</label><input id="m-ecostapp" value="${s.costapp_username||''}" placeholder="Đúng mã học viên đã cấp bên CostApp"></div>
+    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 12px">Điền đúng mã này thì nút "Tự tính cost món khác" bên app học viên sẽ tự đăng nhập luôn, không cần gõ lại mã học viên/mật khẩu.</p>
     <div class="field"><label>Ghi chú</label><input id="m-enote" value="${s.note||''}"></div>
     <button class="btn btn-honey" id="m-esave">Lưu</button>`);
   $('#m-esave').addEventListener('click', async ()=>{
@@ -302,6 +304,7 @@ function editStudent(s){
     btn.disabled = true; btn.textContent = 'Đang lưu...';
     const r = await api('admin_update_student', {id:s.id, data:{
       name: $('#m-ename').value.trim(), phone: $('#m-ephone').value.trim(), note: $('#m-enote').value.trim(),
+      costapp_username: $('#m-ecostapp').value.trim(),
     }});
     if(r.ok){ closeModal(); loadStudents(); toast('Đã lưu'); }
     else { btn.disabled=false; btn.textContent=oldText; alert('Lưu thất bại: ' + r.error); }
