@@ -113,7 +113,7 @@
         <p style="color:var(--muted);font-size:13px;margin-top:-8px">Bán thành phẩm (cốt trà, siro, nước đường...) lấy từ Sheet công thức gốc — công bố để học viên xem cả công thức nền, không chỉ món hoàn thiện.</p>
         <input type="text" id="search-semis" placeholder="🔎 Tìm công thức nền theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
-          <table><thead><tr><th>Tên</th><th>Sản lượng</th><th>Giá thành/đơn vị</th><th>Danh mục</th><th>Thứ tự</th><th>Trạng thái</th><th></th></tr></thead>
+          <table><thead><tr><th>Tên</th><th>Sản lượng</th><th>Tổng cost</th><th>Giá thành/đơn vị</th><th>Danh mục</th><th>Thứ tự</th><th>Trạng thái</th><th></th></tr></thead>
           <tbody id="tb-semis"></tbody></table>
         </div>
       </section>
@@ -204,13 +204,33 @@
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal-body"></div></div>
 
 <script>
-const GAS_URL = 'https://tdh-portal.klinh-maihoang.workers.dev'; // giống hệt URL đã dán trong portal-hocvien.html
+const GAS_URL = 'DÁN_URL_WEB_APP_APPS_SCRIPT_PORTAL_VÀO_ĐÂY'; // giống hệt URL đã dán trong portal-hocvien.html
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 // Dùng khi nhúng dữ liệu vào thuộc tính onclick='...' bọc bởi DẤU NHÁY ĐƠN —
 // nếu tên món/file/thông báo có chứa dấu nháy đơn thật (VD "Trà L'Amour"),
 // JSON.stringify không tự escape ký tự này, sẽ làm ĐỨT GÃY thuộc tính HTML
 // giữa chừng và làm hỏng nút bấm. Escape thành mã HTML &#39; để an toàn.
 function jsonAttr(obj){ return JSON.stringify(obj).replace(/'/g, '&#39;'); }
+
+/* ================= XÁC NHẬN LÝ DO THAY ĐỔI (chỉ áp dụng khi SỬA công thức
+ * ĐÃ từng lưu trước đó — món/công thức nền lần ĐẦU TIÊN chỉnh thì bỏ qua,
+ * lưu thẳng luôn vì chưa có gì để "thay đổi" cả). */
+function confirmRecipeChangeThen(everEdited, itemName, onProceed){
+  if(!everEdited){ onProceed(''); return; }
+  openModal(`<h3>⚠️ Xác nhận thay đổi</h3>
+    <p style="font-size:14px;color:var(--ink);margin:0 0 14px">Bạn đang sửa lại công thức đã lưu trước đó: <b>${itemName}</b>.</p>
+    <div class="field"><label>Vì sao cần thay đổi lần này? (bắt buộc)</label><textarea id="m-reason" rows="3" placeholder="VD: cập nhật giá nguyên liệu mới, sửa sai ảnh/mô tả..."></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" id="m-cancel-change" style="flex:1">Huỷ, không thay đổi</button>
+      <button class="btn btn-honey" id="m-confirm-change" style="flex:1">Xác nhận thay đổi</button>
+    </div>`);
+  $('#m-cancel-change').addEventListener('click', closeModal);
+  $('#m-confirm-change').addEventListener('click', ()=>{
+    const reason = $('#m-reason').value.trim();
+    if(!reason){ alert('Nhập lý do thay đổi trước khi xác nhận.'); return; }
+    onProceed(reason);
+  });
+}
 let ADMIN_KEY = localStorage.getItem('tdh_portal_admin_key') || '';
 
 async function api(action, data){
@@ -424,19 +444,21 @@ function editDish(d){
     }
   });
 
-  $('#m-save-dish').addEventListener('click', async ()=>{
-    const btn = $('#m-save-dish');
-    if(btn.disabled) return;
-    const oldText = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Đang lưu...';
-    const r = await api('admin_update_dish_meta', {dishId:d.id, dishName:d.name, data:{
+  $('#m-save-dish').addEventListener('click', ()=>{
+    // Gom dữ liệu NGAY LÚC bấm Lưu — vì bước xác nhận lý do (nếu có) sẽ thay
+    // nội dung modal này, đọc lại $('#m-img') v.v. lúc đó sẽ không còn đúng.
+    const data = {
       image_url:$('#m-img').value.trim(), description:$('#m-desc').value.trim(),
       instructions:$('#m-instr').value.trim(),
       category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(),
       file_type: currentDishFileType,
-      published: $('#m-pub').checked }});
-    if(r.ok){ closeModal(); loadDishes(); toast('Đã lưu'); }
-    else { btn.disabled = false; btn.textContent = oldText; alert('Lưu thất bại: ' + r.error); }
+      published: $('#m-pub').checked,
+    };
+    confirmRecipeChangeThen(d.everEdited, d.name, async (reason)=>{
+      const r = await api('admin_update_dish_meta', {dishId:d.id, dishName:d.name, reason, data});
+      if(r.ok){ closeModal(); loadDishes(); toast('Đã lưu'); }
+      else alert('Lưu thất bại: ' + r.error);
+    });
   });
 }
 function fileToBase64(file){
@@ -459,12 +481,12 @@ async function loadSemis(){
 function renderSemiTable(list){
   $('#tb-semis').innerHTML = list.map(s=>`
     <tr>
-      <td>${s.name}</td><td>${s.yieldQty||''} ${s.yieldUnit||''}</td><td>${money(s.unitCost)}</td>
+      <td>${s.name}</td><td>${s.yieldQty||''} ${s.yieldUnit||''}</td><td>${money(s.totalCost)}</td><td>${money(s.unitCost)}</td>
       <td>${s.category||'—'}</td>
       <td>${s.order||'—'}</td>
       <td><span class="badge ${s.published?'badge-on':'badge-off'}">${s.published?'Đã công bố':'Chưa công bố'}</span></td>
       <td><button class="btn btn-ghost btn-sm" onclick='editSemi(${jsonAttr(s)})'>Sửa</button></td>
-    </tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy công thức nền nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">Không tìm thấy công thức nền nào — kiểm tra Sheet ID công thức gốc ở Cài đặt, hoặc thử từ khoá khác.</td></tr>';
 }
 $('#search-semis').addEventListener('input', e=>{
   const q = stripDiacritics(e.target.value.trim());
@@ -508,19 +530,19 @@ function editSemi(s){
     }
   });
 
-  $('#m-save-semi').addEventListener('click', async ()=>{
-    const btn = $('#m-save-semi');
-    if(btn.disabled) return;
-    const oldText = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Đang lưu...';
-    const r = await api('admin_update_semi_meta', {semiId:s.id, semiName:s.name, data:{
+  $('#m-save-semi').addEventListener('click', ()=>{
+    const data = {
       image_url:$('#m-simg').value.trim(), description:$('#m-sdesc').value.trim(),
       instructions:$('#m-sinstr').value.trim(),
       category:$('#m-scat').value.trim(), display_order:$('#m-sorder').value.trim(),
       file_type: currentSemiFileType,
-      published: $('#m-spub').checked }});
-    if(r.ok){ closeModal(); loadSemis(); toast('Đã lưu'); }
-    else { btn.disabled = false; btn.textContent = oldText; alert('Lưu thất bại: ' + r.error); }
+      published: $('#m-spub').checked,
+    };
+    confirmRecipeChangeThen(s.everEdited, s.name, async (reason)=>{
+      const r = await api('admin_update_semi_meta', {semiId:s.id, semiName:s.name, reason, data});
+      if(r.ok){ closeModal(); loadSemis(); toast('Đã lưu'); }
+      else alert('Lưu thất bại: ' + r.error);
+    });
   });
 }
 
