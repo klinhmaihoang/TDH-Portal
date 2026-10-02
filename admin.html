@@ -166,6 +166,7 @@
             <div class="field"><label>Sheet ID công thức gốc (tài khoản CostApp chính)</label><input id="s-master_sheet_id"></div>
             <div class="field" style="grid-column:1/-1"><label>Danh mục dành cho Lớp cốt lõi (cách nhau bằng dấu phẩy — phải khớp đúng chữ ở ô "Danh mục" khi sửa công thức)</label><input id="s-core_class_categories" placeholder="VD: Trà sữa, Trà trái cây, Trà nền, Trà sữa nền"></div>
             <div class="field" style="grid-column:1/-1"><label>Danh mục Nguyên liệu/Dụng cụ dành cho Lớp cốt lõi (để trống = Lớp cốt lõi không xem được mục Nguyên liệu/Dụng cụ nào cả)</label><input id="s-core_class_product_categories" placeholder="VD: Trà, Bột, Ly/cốc"></div>
+            <div class="field" style="grid-column:1/-1"><label>Danh mục Tài liệu dành cho Lớp cốt lõi (để trống = Lớp cốt lõi không xem được tài liệu nào cả)</label><input id="s-core_class_file_categories" placeholder="VD: Tài liệu chung, Công thức cơ bản"></div>
             <div class="field" style="grid-column:1/-1"><label>Thứ tự hiện danh mục — Món hoàn thiện (cách nhau bằng dấu phẩy, đúng thứ tự muốn hiện)</label><input id="s-dish_category_order" placeholder="VD: Hồng trà,Lục trà,Trà sữa,Trà olong,Trà thái,Cà phê,Đá xay"></div>
             <div class="field" style="grid-column:1/-1"><label>Thứ tự hiện danh mục — Công thức nền</label><input id="s-semi_category_order" placeholder="VD: Nước đường,Cốt trà nền,Cốt cà phê,Topping"></div>
             <div class="field"><label>Link app CostApp</label><input id="s-costapp_url"></div>
@@ -743,7 +744,7 @@ async function loadSettings(){
   const r = await api('admin_get_settings', {});
   if(!r.ok) return;
   const s = r.settings||{};
-  ['master_sheet_id','core_class_categories','core_class_product_categories','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+  ['master_sheet_id','core_class_categories','core_class_product_categories','core_class_file_categories','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
     if($('#s-'+k)) $('#s-'+k).value = s[k]||'';
   });
 }
@@ -753,7 +754,7 @@ $('#btn-save-settings').addEventListener('click', async ()=>{
   const oldText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Đang lưu...';
   const data = {};
-  ['master_sheet_id','core_class_categories','core_class_product_categories','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+  ['master_sheet_id','core_class_categories','core_class_product_categories','core_class_file_categories','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
     data[k] = $('#s-'+k).value.trim();
   });
   const r = await api('admin_update_settings', {data});
