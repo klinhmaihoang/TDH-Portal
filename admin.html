@@ -300,7 +300,7 @@ function renderStudentTable(list){
           <option value="core" ${s.class_type==='core'?'selected':''}>Cốt lõi</option>
         </select>
       </td>
-      <td>${s.note||''}</td>
+      <td>${s.note||''}${s.private_group?` <span class="badge badge-on">Nhóm: ${s.private_group}</span>`:''}</td>
       <td><span class="badge ${String(s.active).toUpperCase()==='TRUE'?'badge-on':'badge-off'}">${String(s.active).toUpperCase()==='TRUE'?'Hoạt động':'Đã khoá'}</span></td>
       <td style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick='editStudent(${jsonAttr(s)})'>Sửa</button>
@@ -316,6 +316,7 @@ function editStudent(s){
     <div class="field"><label>Số điện thoại</label><input id="m-ephone" value="${s.phone||''}"></div>
     <div class="field"><label>Mã học viên CostApp (tuỳ chọn — để trống nếu học viên đăng nhập CostApp bằng Google)</label><input id="m-ecostapp" value="${s.costapp_username||''}" placeholder="Đúng mã học viên đã cấp bên CostApp"></div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 12px">Điền đúng mã này thì nút "Tự tính cost món khác" bên app học viên sẽ tự đăng nhập luôn, không cần gõ lại mã học viên/mật khẩu.</p>
+    <div class="field"><label>Nhóm riêng (tuỳ chọn — VD: DoanhNghiepABC; chỉ học viên cùng nhóm mới thấy công thức riêng của nhóm đó)</label><input id="m-egroup" value="${s.private_group||''}"></div>
     <div class="field"><label>Ghi chú</label><input id="m-enote" value="${s.note||''}"></div>
     <button class="btn btn-honey" id="m-esave">Lưu</button>`);
   $('#m-esave').addEventListener('click', async ()=>{
@@ -325,7 +326,7 @@ function editStudent(s){
     btn.disabled = true; btn.textContent = 'Đang lưu...';
     const r = await api('admin_update_student', {id:s.id, data:{
       name: $('#m-ename').value.trim(), phone: $('#m-ephone').value.trim(), note: $('#m-enote').value.trim(),
-      costapp_username: $('#m-ecostapp').value.trim(),
+      costapp_username: $('#m-ecostapp').value.trim(), private_group: $('#m-egroup').value.trim(),
     }});
     if(r.ok){ closeModal(); loadStudents(); toast('Đã lưu'); }
     else { btn.disabled=false; btn.textContent=oldText; alert('Lưu thất bại: ' + r.error); }
@@ -345,6 +346,7 @@ $('#btn-add-student').addEventListener('click', ()=>{
         <option value="core">Cốt lõi (chỉ xem danh mục giới hạn — xem Cài đặt)</option>
       </select>
     </div>
+    <div class="field"><label>Nhóm riêng (tuỳ chọn — VD: DoanhNghiepABC)</label><input id="m-group"></div>
     <div class="field"><label>Ghi chú (tuỳ chọn — VD: lớp Pha chế 12/2026)</label><input id="m-note"></div>
     <button class="btn btn-honey" id="m-save">Thêm & sinh mã truy cập</button>`);
   $('#m-save').addEventListener('click', async ()=>{
@@ -352,7 +354,7 @@ $('#btn-add-student').addEventListener('click', ()=>{
     if(btn.disabled) return;
     const oldText = btn.textContent;
     btn.disabled = true; btn.textContent = 'Đang lưu...';
-    const r = await api('admin_add_student', {data:{name:$('#m-name').value.trim(), phone:$('#m-phone').value.trim(), note:$('#m-note').value.trim(), class_type:$('#m-classtype').value}});
+    const r = await api('admin_add_student', {data:{name:$('#m-name').value.trim(), phone:$('#m-phone').value.trim(), note:$('#m-note').value.trim(), class_type:$('#m-classtype').value, private_group:$('#m-group').value.trim()}});
     if(!r.ok){ btn.disabled=false; btn.textContent=oldText; alert('Lỗi: ' + r.error); return; }
     closeModal(); loadStudents();
     openModal(`<h3>✅ Đã thêm học viên</h3><p>Mã truy cập: <span class="code-pill">${r.accessCode}</span></p>
@@ -424,6 +426,7 @@ function editDish(d){
     <div class="field"><label>Cách làm / Hướng dẫn pha chế (mỗi dòng 1 bước)</label><textarea id="m-instr" rows="5" placeholder="Bước 1: ...&#10;Bước 2: ...">${d.instructions||''}</textarea></div>
     <div class="field"><label>Danh mục (VD: Cà phê pha phin, Trà trái cây...)</label><input id="m-cat" value="${d.category||''}"></div>
     <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-order" value="${d.order||''}"></div>
+    <div class="field"><label>Chỉ dành riêng cho nhóm (để trống = ai cũng thấy theo loại lớp; điền đúng tên "Nhóm riêng" của học viên → CHỈ nhóm đó thấy)</label><input id="m-group" value="${d.privateGroup||''}"></div>
     <div class="field"><label><input type="checkbox" id="m-pub" ${d.published?'checked':''} style="width:auto;margin-right:6px">Công bố cho học viên xem</label></div>
     <button class="btn btn-honey" id="m-save-dish">Lưu</button>`);
 
@@ -451,7 +454,7 @@ function editDish(d){
     const data = {
       image_url:$('#m-img').value.trim(), description:$('#m-desc').value.trim(),
       instructions:$('#m-instr').value.trim(),
-      category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(),
+      category:$('#m-cat').value.trim(), display_order:$('#m-order').value.trim(), private_group:$('#m-group').value.trim(),
       file_type: currentDishFileType,
       published: $('#m-pub').checked,
     };
@@ -510,6 +513,7 @@ function editSemi(s){
     <div class="field"><label>Cách làm / Hướng dẫn pha chế (mỗi dòng 1 bước)</label><textarea id="m-sinstr" rows="5" placeholder="Bước 1: ...&#10;Bước 2: ...">${s.instructions||''}</textarea></div>
     <div class="field"><label>Danh mục (VD: Cốt trà, Siro, Nước sốt...)</label><input id="m-scat" value="${s.category||''}"></div>
     <div class="field"><label>Thứ tự hiển thị (số nhỏ hiện trước, để trống = cuối)</label><input id="m-sorder" value="${s.order||''}"></div>
+    <div class="field"><label>Chỉ dành riêng cho nhóm (để trống = ai cũng thấy theo loại lớp; điền đúng tên "Nhóm riêng" của học viên → CHỈ nhóm đó thấy)</label><input id="m-sgroup" value="${s.privateGroup||''}"></div>
     <div class="field"><label><input type="checkbox" id="m-spub" ${s.published?'checked':''} style="width:auto;margin-right:6px">Công bố cho học viên xem</label></div>
     <button class="btn btn-honey" id="m-save-semi">Lưu</button>`);
 
@@ -535,7 +539,7 @@ function editSemi(s){
     const data = {
       image_url:$('#m-simg').value.trim(), description:$('#m-sdesc').value.trim(),
       instructions:$('#m-sinstr').value.trim(),
-      category:$('#m-scat').value.trim(), display_order:$('#m-sorder').value.trim(),
+      category:$('#m-scat').value.trim(), display_order:$('#m-sorder').value.trim(), private_group:$('#m-sgroup').value.trim(),
       file_type: currentSemiFileType,
       published: $('#m-spub').checked,
     };
@@ -678,7 +682,7 @@ async function loadShopping(){
 }
 function renderShoppingTable(list){
   $('#tb-shopping').innerHTML = list.map(s=>`
-    <tr><td>${s.title}</td><td>${s.category||''}</td><td>${s.note||''}</td>
+    <tr><td>${s.title}</td><td>${s.category||''}</td><td>${s.note||''}${s.private_group?` <span class="badge badge-on">Nhóm: ${s.private_group}</span>`:''}</td>
     <td><button class="btn btn-ghost btn-sm" onclick='editShopping(${jsonAttr(s)})'>Sửa</button>
     <button class="btn btn-danger btn-sm" onclick="delRow('shopping','${s.id}',loadShopping)">Xoá</button></td></tr>`).join('')
     || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Chưa có link mua sắm nào.</td></tr>';
@@ -744,7 +748,7 @@ async function loadSettings(){
   const r = await api('admin_get_settings', {});
   if(!r.ok) return;
   const s = r.settings||{};
-  ['master_sheet_id','core_class_categories','core_class_product_categories','core_class_file_categories','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+  ['master_sheet_id','core_class_categories','core_class_product_categories','core_class_file_categories','dish_category_order','semi_category_order','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
     if($('#s-'+k)) $('#s-'+k).value = s[k]||'';
   });
 }
@@ -754,7 +758,7 @@ $('#btn-save-settings').addEventListener('click', async ()=>{
   const oldText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Đang lưu...';
   const data = {};
-  ['master_sheet_id','core_class_categories','core_class_product_categories','core_class_file_categories','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
+  ['master_sheet_id','core_class_categories','core_class_product_categories','core_class_file_categories','dish_category_order','semi_category_order','costapp_url','academy_name','zalo_phone','facebook_url','email','group_url'].forEach(k=>{
     data[k] = $('#s-'+k).value.trim();
   });
   const r = await api('admin_update_settings', {data});
