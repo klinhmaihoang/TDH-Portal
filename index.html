@@ -511,9 +511,12 @@ const CATEGORY_ORDER = {
   semi: ['Nước đường', 'Cốt trà nền', 'Cốt cà phê', 'Topping'],
 };
 function sortCategoriesByOrder(cats, mode){
-  const order = CATEGORY_ORDER[mode] || [];
+  // Ưu tiên thứ tự admin khai báo trong Cài đặt; chưa khai báo thì dùng mặc định cứng ở trên.
+  const raw = (SETTINGS && SETTINGS[mode==='dish' ? 'dish_category_order' : 'semi_category_order']) || '';
+  const fromSettings = raw.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  const order = fromSettings.length ? fromSettings : (CATEGORY_ORDER[mode] || []).map(s=>s.toLowerCase());
   return [...cats].sort((a, b) => {
-    const ia = order.indexOf(a), ib = order.indexOf(b);
+    const ia = order.indexOf(String(a).trim().toLowerCase()), ib = order.indexOf(String(b).trim().toLowerCase());
     if(ia===-1 && ib===-1) return a.localeCompare(b, 'vi');
     if(ia===-1) return 1;
     if(ib===-1) return -1;
