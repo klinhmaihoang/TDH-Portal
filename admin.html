@@ -98,7 +98,7 @@
 
       <!-- CÔNG THỨC -->
       <section class="panel" id="panel-dishes">
-        <div class="panel-head"><h2>Công bố món hoàn thiện</h2></div>
+        <div class="panel-head"><h2>Công bố món hoàn thiện</h2><button class="btn btn-ghost btn-sm" onclick="exportRecipesCsv('dish')">⬇ Tải file công thức (CSV)</button></div>
         <p style="color:var(--muted);font-size:13px;margin-top:-8px">Danh sách món lấy trực tiếp từ Sheet công thức gốc (CostApp). Bấm vào món để thêm ảnh/mô tả và công bố cho học viên.</p>
         <input type="text" id="search-dishes" placeholder="🔎 Tìm món theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
@@ -109,7 +109,7 @@
 
       <!-- CÔNG THỨC NỀN -->
       <section class="panel" id="panel-semis">
-        <div class="panel-head"><h2>Công bố công thức nền</h2></div>
+        <div class="panel-head"><h2>Công bố công thức nền</h2><button class="btn btn-ghost btn-sm" onclick="exportRecipesCsv('semi')">⬇ Tải file công thức (CSV)</button></div>
         <p style="color:var(--muted);font-size:13px;margin-top:-8px">Bán thành phẩm (cốt trà, siro, nước đường...) lấy từ Sheet công thức gốc — công bố để học viên xem cả công thức nền, không chỉ món hoàn thiện.</p>
         <input type="text" id="search-semis" placeholder="🔎 Tìm công thức nền theo tên..." style="width:100%;margin-bottom:12px">
         <div class="card">
@@ -245,6 +245,36 @@ async function api(action, data){
     // vô tác dụng. Giờ luôn trả về lỗi rõ ràng để nơi gọi hiện ra cho người dùng.
     return { ok:false, error:'Không kết nối được máy chủ (có thể đang khởi động, đợi vài giây rồi thử lại).' };
   }
+}
+
+/* ====== Xuất công thức ra CSV (mở bằng Excel/Google Sheets; có BOM để không lỗi tiếng Việt) ====== */
+function csvCell(v){ v = (v===null||v===undefined) ? '' : String(v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+async function exportRecipesCsv(mode){
+  toast('Đang chuẩn bị file...');
+  const r = await api('admin_export_recipes', {});
+  if(!r.ok){ alert('Xuất thất bại: ' + r.error); return; }
+  const isDish = mode==='dish';
+  const list = isDish ? r.dishes : r.semis;
+  const head = isDish
+    ? ['Loại','Tên món','Danh mục','Nhóm riêng','Đã công bố','Giá vốn','Giá bán đề xuất','Mô tả','Cách làm','Thành phần','Nhóm thành phần','Số lượng','Đơn vị','Đơn giá','Thành tiền']
+    : ['Loại','Tên công thức nền','Danh mục','Nhóm riêng','Đã công bố','Sản lượng','Đơn vị sản lượng','Tổng cost','Giá thành/đơn vị','Mô tả','Cách làm','Thành phần','Nhóm thành phần','Số lượng','Đơn vị','Đơn giá','Thành tiền'];
+  const rows = [head];
+  list.forEach(it=>{
+    const comps = it.components.length ? it.components : [null];
+    comps.forEach((c,i)=>{
+      const first = i===0;
+      const base = isDish
+        ? ['Món hoàn thiện', it.name, it.category, it.privateGroup, it.published?'Có':'Chưa', it.cost, it.suggestedPrice, first?it.description:'', first?it.instructions:'']
+        : ['Công thức nền', it.name, it.category, it.privateGroup, it.published?'Có':'Chưa', it.yieldQty, it.yieldUnit, Math.round(it.totalCost), Math.round(it.unitCost), first?it.description:'', first?it.instructions:''];
+      rows.push(base.concat(c ? [c.name, c.typeLabel, c.qty, c.unit, c.unitPrice, Math.round(c.thanhTien)] : ['','','','','','']));
+    });
+  });
+  const csv = '\ufeff' + rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  const el = document.createElement('a');
+  el.href = url; el.download = (isDish?'cong-thuc-mon-hoan-thien':'cong-thuc-nen') + '.csv';
+  document.body.appendChild(el); el.click(); el.remove(); URL.revokeObjectURL(url);
+  toast('Đã tải file');
 }
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2400); }
 function money(n){ n=Math.round(Number(n)||0); return n.toLocaleString('vi-VN')+'đ'; }
